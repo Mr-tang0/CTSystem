@@ -1,0 +1,13 @@
+/frontend/node_modules
+/Manager/SDK
+/Manager
+/build
+/frontend/dist
+/frontend/src/assets
+/frontend/wailsjs
+frontend/vite.config.js
+frontend/src/main.js
+frontend/src/style.css
+frontend/package.json
+frontend/package.json.md5
+frontend/package-lock.json
