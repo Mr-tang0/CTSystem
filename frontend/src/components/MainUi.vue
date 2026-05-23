@@ -1,7 +1,7 @@
 <template>
     <main-container> 
         <!-- 菜单栏 -->
-        <div class='top-bar'>
+        <div class='top-bar' @dblclick="handleTitleBarDblClick">
             <div class='logo-section'>
                 <logo>NIMTE CT CONTROL</logo>
             </div>
@@ -50,17 +50,17 @@
                     </button>
                 </user-header>
                 <div class='window-actions'>    
-                    <button class="window-btn minimize-btn" type="button" title="最小化">
+                    <button class="window-btn minimize-btn" type="button" title="最小化" @click="minimize">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="5" y1="12" x2="19" y2="12"/>
                         </svg>
                     </button>
-                    <button class="window-btn maximize-btn" type="button" title="最大化">
+                    <button class="window-btn maximize-btn" type="button" title="最大化" @click="toggleMaximize">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="3" y="3" width="18" height="18" rx="2"/>
                         </svg>
                     </button>
-                    <button class="window-btn close-btn" type="button" title="关闭">
+                    <button class="window-btn close-btn" type="button" title="关闭" @click="closeApp">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"/>
                             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -157,32 +157,52 @@
             </left-panel>
 
             <!-- 中间显示面板 -->
-            <div class='mid-panel'>
-                <div class='detector-container'>
-
-                    <!-- 探测器显示 -->
-                    <div class='detector-display'>
-
-                        <!-- 无图像显示 -->
-                        <div class='detector-placeholder'>
-                            <div class='placeholder-icon'>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
-                                    <circle cx="12" cy="12" r="6"/>
-                                    <circle cx="12" cy="12" r="2"/>
-                                </svg>
-                            </div>
-                            <div class='placeholder-text'>等待图像数据...</div>
-                        </div>
+            <div class='mid-panel-wrapper'>
+                <!-- 左侧控制面板按钮 -->
+                <button 
+                    class="panel-toggle-btn" 
+                    :class="{ 'expanded': showDetectorPanel }"
+                    @click="toggleDetectorPanel"
+                >{{ showDetectorPanel ? '《' : '》' }}</button>
+                
+                <!-- 左侧探测器控制面板 -->
+                <transition name="slide">
+                    <div v-if="showDetectorPanel" class="detector-panel-container">
+                        <DetectorPanel @close="showDetectorPanel = false" @apply="handleApplyParams" />
                     </div>
+                </transition>
+                
+                <!-- 中间显示区域 -->
+                <div class='mid-panel'>
+                    <div class='detector-container'>
 
-                    <!-- 历史预览图片 -->
-                    <div class='detector-footer'>
-                        <!-- <div class='detector-info'>
-                            <span class='info-tag'>分辨率: 3072×3072</span>
-                            <span class='info-tag'>像素深度: 16bit</span>
-                            <span class='info-tag'>Binning: 1×1</span>
-                        </div> -->
+                        <!-- 探测器显示 -->
+                        <div class='detector-display'>
+
+                            <!-- 无图像显示 -->
+                            <div class='detector-placeholder'>
+                                <div class='placeholder-icon'>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                        <circle cx="12" cy="12" r="6"/>
+                                        <circle cx="12" cy="12" r="2"/>
+                                    </svg>
+                                </div>
+                                <div class='placeholder-text'>等待图像数据...</div>
+                            </div>
+                            
+                            <!-- 探测器监控面板 -->
+                            <DetectorMonitor />
+                        </div>
+
+                        <!-- 历史预览图片 -->
+                        <div class='detector-footer'>
+                            <!-- <div class='detector-info'>
+                                <span class='info-tag'>分辨率: 3072×3072</span>
+                                <span class='info-tag'>像素深度: 16bit</span>
+                                <span class='info-tag'>Binning: 1×1</span>
+                            </div> -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -410,6 +430,51 @@
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
+import {WindowMinimise, 
+          WindowToggleMaximise, 
+          Quit,
+          WindowIsMaximised, 
+          WindowUnmaximise,
+        } from '../../wailsjs/runtime/runtime'
+import DetectorPanel from './DetectorPanel.vue';
+import DetectorMonitor from './DetectorMonitor.vue';
+
+const handleTitleBarDblClick = async () => {
+    const isMax = await WindowIsMaximised()
+    if (isMax) {
+      WindowUnmaximise()
+    } else {
+      WindowToggleMaximise()
+    }
+  }
+
+  const minimize = () => WindowMinimise()
+  const toggleMaximize = () => WindowToggleMaximise()
+  const closeApp = async () => {
+    Quit()
+    // const result = await HandleClose()
+    // if (result) {
+    //   Quit()
+    // }
+    // else{
+    //   notify.error('未知错误,系统未能正常退出', "error", 3000)
+    // }
+  }
+
+// 左侧控制面板状态
+const showDetectorPanel = ref(false);
+
+// 切换控制面板显示
+const toggleDetectorPanel = () => {
+    showDetectorPanel.value = !showDetectorPanel.value;
+};
+
+// 应用参数
+const handleApplyParams = (params) => {
+    console.log('[探测器参数] 应用参数:', params);
+    // 这里可添加你的 Wails API 调用，将参数发送给后端
+    // window.go.main.App.SetDetectorParams(params);
+};
 
 const Status = reactive({
     Power:{
@@ -506,6 +571,7 @@ main-container {
     border-bottom: 1px solid rgba(148, 163, 184, 0.1);
     backdrop-filter: blur(10px);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --wails-draggable: drag;
 }
 
 .logo-section {
@@ -836,12 +902,83 @@ left-panel {
     font-family: 'Courier New', monospace;
 }
 
+.mid-panel-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 左侧控制面板切换按钮 */
+.panel-toggle-btn {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 28px;
+    height: 160px;
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.3) 0%, rgba(14, 165, 233, 0.3) 100%);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-left: none;
+    border-radius: 0 8px 8px 0;
+    color: #38bdf8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.panel-toggle-btn:hover {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.5) 0%, rgba(14, 165, 233, 0.5) 100%);
+    border-color: rgba(56, 189, 248, 0.5);
+    box-shadow: 2px 0 15px rgba(56, 189, 248, 0.3);
+}
+
+.panel-toggle-btn.expanded {
+    left: 280px;
+}
+
+.panel-toggle-btn svg {
+    width: 18px;
+    height: 18px;
+    transition: transform 0.3s ease;
+}
+
+.panel-toggle-btn.expanded svg {
+    transform: rotate(180deg);
+}
+
+/* 左侧控制面板容器 */
+.detector-panel-container {
+    width: 280px;
+    flex-shrink: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* 滑动过渡动画 */
+.slide-enter-active,
+.slide-leave-active {
+    transition: transform 0.3s ease;
+}
+
+.slide-enter-from,
+.slide-leave-to {
+    transform: translateX(-100%);
+}
+
 .mid-panel {
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
+    transition: margin-left 0.3s ease;
 }
 
 .detector-container {
@@ -909,6 +1046,7 @@ left-panel {
     justify-content: center;
     padding: 20px;
     background: rgba(0, 0, 0, 0.3);
+    position: relative;
 }
 
 .detector-placeholder {
