@@ -207,7 +207,6 @@
                                 <span class='info-tag'>Binning: 1×1</span>
                             </div> -->
                         </div>
-                    </div>
                 </div>
             </div>
 
@@ -433,6 +432,49 @@
     
     <!-- 设备连接模态框 -->
     <DeviceConnectModal :visible="showDeviceModal" @close="showDeviceModal = false" />
+
+    <!-- 更新提示模态框 -->
+    <teleport to="body">
+        <transition name="modal">
+            <div v-if="showUpdateModal" class="modal-overlay" @click.self="showUpdateModal = false">
+                <div class="modal-container update-modal">
+                    <div class="modal-header">
+                        <h3 class="modal-title">发现新版本</h3>
+                        <button class="modal-close" @click="showUpdateModal = false">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="update-content">
+                            <div class="update-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                    <path d="M3 3v5h5"/>
+                                    <path d="M3 16a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+                                    <path d="M16 21h5v-5"/>
+                                </svg>
+                            </div>
+                            <div class="update-info">
+                                <p class="update-version">新版本: <strong>{{ updateInfo.tagName }}</strong></p>
+                                <p class="update-desc">发现应用程序更新，建议及时升级以获得更好的体验。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @click="showUpdateModal = false">
+                            稍后更新
+                        </button>
+                        <button class="btn btn-primary" @click="handleUpdate">
+                            立即更新
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+    </teleport>
 </template>
 
 <script setup>
@@ -443,10 +485,13 @@ import { WindowMinimise,
           WindowIsMaximised,
           WindowUnmaximise,
           EventsOn,
+          BrowserOpenURL
         } from '../../wailsjs/runtime/runtime'
 import DetectorPanel from './DetectorPanel.vue';
 import DetectorMonitor from './DetectorMonitor.vue';
 import DeviceConnectModal from './DeviceConnectModal.vue';
+
+import { APIUpdate } from '../../wailsjs/go/main/App'
 
 //项目管理模态框状态
 const showProjectModal = ref(false);
@@ -458,6 +503,18 @@ const showSettingModal = ref(false);
 const showHelpModal = ref(false);
 //关于模态框状态
 const showAboutModal = ref(false);
+
+// 更新模态框状态
+const showUpdateModal = ref(false);
+
+// 更新处理函数
+const handleUpdate = () => {
+    if (updateInfo.value.htmlUrl) {
+        // window.open(updateInfo.value.htmlUrl, '_blank');
+        BrowserOpenURL(updateInfo.value.htmlUrl) 
+        showUpdateModal.value = false;
+    }
+};
 
 // 图像数据状态
 const ctImage = ref('');
@@ -562,7 +619,24 @@ const handleStopMotion = () => {
     // window.go.main.App.EmergencyStop();
 };
 
-onMounted(()=>{
+
+const updateInfo = ref({
+  tagName: '无',
+  htmlUrl: 'https://github.com'
+})
+
+onMounted(async () =>{
+    const release = await APIUpdate()
+    if (release) {
+        updateInfo.value.tagName = release.tag_name
+        updateInfo.value.htmlUrl = release.html_url
+        if (release.assets.length > 0) {
+            updateInfo.value.htmlUrl = release.assets[0].browser_download_url
+        }
+        // 显示更新模态框
+        showUpdateModal.value = true
+    }
+
     Status.StartTime = new Date().getTime()
     setInterval(()=>{
         Status.RunTime = new Date(new Date().getTime()-Status.StartTime-8*60*60*1000).toLocaleTimeString()
@@ -1799,6 +1873,198 @@ left-panel {
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
+/* 更新模态框样式 */
+/* 遮罩层 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+}
 
+/* 模态框容器 */
+.modal-container {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #cbd5e1;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 8px;
+    transition: all 0.2s;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #f1f5f9;
+}
+
+.modal-close svg {
+    width: 18px;
+    height: 18px;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 20px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 1) 0%, rgba(59, 130, 246, 1) 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.9) 0%, rgba(59, 130, 246, 0.9) 100%);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* 更新模态框内容 */
+.update-modal {
+    width: 420px;
+    max-width: 90vw;
+}
+
+.update-modal .modal-header {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.update-modal .modal-title {
+    color: #f1f5f9;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.update-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 10px 0;
+}
+
+.update-icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%);
+    border-radius: 16px;
+    color: #38bdf8;
+    flex-shrink: 0;
+}
+
+.update-icon svg {
+    width: 32px;
+    height: 32px;
+}
+
+.update-info {
+    flex: 1;
+}
+
+.update-version {
+    font-size: 15px;
+    color: #f1f5f9;
+    margin: 0 0 8px 0;
+    font-weight: 500;
+}
+
+.update-version strong {
+    color: #38bdf8;
+}
+
+.update-desc {
+    font-size: 13px;
+    color: #94a3b8;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.update-modal .modal-footer {
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+/* 模态框动画 */
+.modal-enter-active,
+.modal-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+    opacity: 0;
+}
+
+.modal-enter-active .modal-container,
+.modal-leave-active .modal-container {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.modal-enter-from .modal-container,
+.modal-leave-to .modal-container {
+    transform: scale(0.95);
+    opacity: 0;
+}
 
 </style>
