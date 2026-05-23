@@ -1,0 +1,20 @@
+# Images Folder
+
+This folder contains image resources for the operation guide.
+
+## Required Images
+
+Place the following screenshots here:
+
+1. `detector_connect.png` - Detector connection interface
+2. `detector_panel.png` - Detector control panel
+3. `hvps_connect.png` - High voltage power supply connection
+4. `raysource_connect.png` - Ray source connection
+5. `motor_connect.png` - Motor stage connection
+6. `motor_control.png` - Motor stage control panel
+
+## Guidelines
+
+- Use PNG format with transparent or white background
+- Recommended resolution: 800x600 pixels
+- Add annotations if necessary to highlight important UI elements
