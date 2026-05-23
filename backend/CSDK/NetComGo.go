@@ -1,3 +1,9 @@
+/*
+ * @Author: tang
+ * @Date: 2026-05-23
+ * @GitHub: Mr-tang0/CTSystem
+ * @Description: C SDK包装器，提供Go与C之间的接口转换和回调机制
+ */
 package CSDK
 
 //此文件为SDK的包装器，尽量不要直接使用它，可以进行二次包装

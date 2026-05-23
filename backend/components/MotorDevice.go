@@ -1,3 +1,9 @@
+/*
+ * @Author: tang
+ * @Date: 2026-05-23
+ * @GitHub: Mr-tang0/CTSystem
+ * @Description: 位移台电机设备控制模块，通过Modbus协议控制电机运动
+ */
 package components
 
 import "math"
@@ -5,6 +11,13 @@ import "math"
 type MotorDevice struct {
 	ID  int
 	plc *XinjieClient
+}
+
+// NewMotorDevice 创建电机设备实例
+func NewMotorDevice() *MotorDevice {
+	return &MotorDevice{
+		plc: NewXinjieClient(),
+	}
 }
 
 func (m *MotorDevice) Connect(ip string) error {
@@ -68,7 +81,7 @@ func (m *MotorDevice) MotorStop(axis string) {
 	m.plc.Write_M_Coils(stopAddr, []bool{false})
 }
 
-func (m *MotorDevice) MotorAbsMove(axis string, speed float32, abs_length float32) {
+func (m *MotorDevice) MotorRelMove(axis string, speed float32, abs_length float32) {
 	var moveAddr uint16
 	switch axis {
 	case "X":
@@ -97,6 +110,12 @@ func (m *MotorDevice) MotorAbsMove(axis string, speed float32, abs_length float3
 
 }
 
-func (m *MotorDevice) MotorRelMove(axis string, speed float32, rel_length float32) {
+func (m *MotorDevice) MotorAbsMove(axis string, speed float32, rel_length float32) {
 	// 暂未实现
+}
+
+// MotorAbs 回零操作
+func (m *MotorDevice) MotorAbs(axis string) {
+	m.plc.Write_M_Coils(ADDRESS.ALLABS, []bool{true})
+	m.plc.Write_M_Coils(ADDRESS.ALLABS, []bool{false})
 }

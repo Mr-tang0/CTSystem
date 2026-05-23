@@ -1,3 +1,9 @@
+/*
+ * @Author: tang
+ * @Date: 2026-05-23
+ * @GitHub: Mr-tang0/CTSystem
+ * @Description: 更新服务模块，负责从GitHub获取版本更新信息
+ */
 package backend
 
 import (

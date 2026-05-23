@@ -1,3 +1,9 @@
+/*
+ * @Author: tang
+ * @Date: 2026-05-23
+ * @GitHub: Mr-tang0/CTSystem
+ * @Description: CTSystem主程序入口，使用Wails框架构建跨平台桌面应用
+ */
 package main
 
 import (
@@ -19,7 +25,7 @@ func main() {
 	err := wails.Run(&options.App{
 		Title:  "CTSystem",
 		Width:  1300,
-		Height: 1000,
+		Height: 950,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

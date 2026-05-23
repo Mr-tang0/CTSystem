@@ -68,7 +68,7 @@
 
                         <!-- 放射源 -->
                         <div class="device-item">
-                            <label class="device-label">放射源</label>
+                            <label class="device-label">电子源</label>
                             <div class="device-input-group">
                                 <input 
                                     v-model="devices.source.ip" 
@@ -160,9 +160,9 @@ defineProps({
 const emit = defineEmits(['close']);
 
 const devices = reactive({
-    stage: { ip: '192.168.1.101', connected: false },
-    power: { ip: '192.168.1.102', connected: false },
-    source: { ip: '192.168.1.103', connected: false },
+    stage: { ip: '192.168.11.6', connected: false },
+    power: { ip: '192.168.11.4', connected: false },
+    source: { ip: '192.168.11.5', connected: false },
     detector: { selected: '', connected: false }
 });
 

@@ -166,7 +166,7 @@
                 >{{ showDetectorPanel ? '《' : '》' }}</button>
                 
                 <!-- 左侧探测器控制面板 -->
-                <transition name="slide">
+                <transition name="slide" >
                     <div v-if="showDetectorPanel" class="detector-panel-container">
                         <DetectorPanel @close="showDetectorPanel = false" @apply="handleApplyParams" />
                     </div>
@@ -200,13 +200,13 @@
                         </div>
 
                         <!-- 历史预览图片 -->
-                        <div class='detector-footer'>
-                            <!-- <div class='detector-info'>
+                        <!-- <div class='detector-footer'>
+                            <div class='detector-info'>
                                 <span class='info-tag'>分辨率: 3072×3072</span>
                                 <span class='info-tag'>像素深度: 16bit</span>
                                 <span class='info-tag'>Binning: 1×1</span>
-                            </div> -->
-                        </div>
+                            </div>
+                        </div> -->
                 </div>
             </div>
 

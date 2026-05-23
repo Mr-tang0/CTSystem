@@ -1,3 +1,9 @@
+/*
+ * @Author: tang
+ * @Date: 2026-05-23
+ * @GitHub: Mr-tang0/CTSystem
+ * @Description: CSDK类型定义，提供与C SDK交互的基础类型和结构体
+ */
 package CSDK
 
 // 所有类型定义

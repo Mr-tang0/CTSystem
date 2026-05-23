@@ -1,3 +1,9 @@
+/*
+ * @Author: tang
+ * @Date: 2026-05-23
+ * @GitHub: Mr-tang0/CTSystem
+ * @Description: 信捷PLC Modbus通信客户端，实现与PLC的Modbus TCP通信
+ */
 package components
 
 //created by Tanglifa
@@ -18,6 +24,11 @@ type XinjieClient struct {
 	client  modbus.Client
 	address string
 	mu      sync.Mutex
+}
+
+// NewXinjieClient 创建信捷PLC客户端实例
+func NewXinjieClient() *XinjieClient {
+	return &XinjieClient{}
 }
 
 // OpenTCP 连接到指定 IP 和 端口 (默认 502)

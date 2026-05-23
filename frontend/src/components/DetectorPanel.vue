@@ -1,5 +1,5 @@
 <template>
-    <div class="detector-panel">
+    <div class="detector-panel" >
         <div class="panel-header">
             <span class="panel-title">探测器参数</span>
             <!-- <button class="close-btn" @click="$emit('close')">

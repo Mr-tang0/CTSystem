@@ -1,3 +1,9 @@
+/*
+ * @Author: tang
+ * @Date: 2026-05-23
+ * @GitHub: Mr-tang0/CTSystem
+ * @Description: PLC地址映射定义，包含电机控制相关的寄存器地址
+ */
 package components
 
 // PLC 地址映射结构

@@ -1,3 +1,9 @@
+/*
+ * @Author: tang
+ * @Date: 2026-05-23
+ * @GitHub: Mr-tang0/CTSystem
+ * @Description: 探测器设备管理模块，负责探测器连接和事件处理
+ */
 package components
 
 import (
