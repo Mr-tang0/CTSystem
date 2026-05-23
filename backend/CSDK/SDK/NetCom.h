@@ -567,7 +567,7 @@ extern "C" {
 	COM_API BOOL COM_DownloadAedTOffsetTpl(CHAR* path);
 	COM_API BOOL COM_DownloadDefectTpl(CHAR* path);
 	COM_API BOOL COM_UploadFPZMTpl(CHAR TplType, CHAR * Tplpath);
-	COM_API BOOL COM_DownLoadFPZMTpl(CHAR TplType= FP_TPL_1x1, CHAR * Tplpath=NULL);
+	COM_API BOOL COM_DownLoadFPZMTpl(CHAR TplType, CHAR * Tplpath);//CHAR TplType= FP_TPL_1x1, CHAR * Tplpath=NULL
 	COM_API BOOL COM_SetOffsetTpl(CHAR* path);
 	COM_API BOOL COM_SetGainTpl(CHAR* path);
 	COM_API BOOL COM_SetDefectTpl(CHAR* path);
@@ -627,94 +627,94 @@ extern "C" {
 	COM_API UINT16 COM_GetMeanDose(UINT16* u16Image, UINT32 size);
 	COM_API BOOL COM_SetAedTOffsetTpl(CHAR* path);
 	COM_API BOOL COM_CalibAedTTpl(char* pData, USHORT u16LineNum);
-	COM_API BOOL COM_GetFPLicense(TLicenseInfo* tLicenseInfo,CHAR choose = 0);
+	COM_API BOOL COM_GetFPLicense(TLicenseInfo* tLicenseInfo,CHAR choose);//choose = 0
 	COM_API CHAR COM_GetFPTypeFromHardware();
 	COM_API BOOL COM_SetRecoverTime(unsigned char ucTime);
 	COM_API UCHAR COM_GetRecoverTime();
 
 	//Multi FP API
-	COM_API BOOL COM_SetPreCalibModeEx(CHAR nCalMode, CHAR index = -1);
-	COM_API BOOL COM_HstAcqEx(CHAR index = -1);
-	COM_API BOOL COM_AedAcqEx(CHAR index = -1);
-	COM_API BOOL COM_TriggerEx(CHAR index = -1);
-	COM_API BOOL COM_Trigger2Ex(CHAR index = -1);
-	COM_API BOOL COM_PrepEx(CHAR index = -1);
-	COM_API BOOL COM_AcqEx(CHAR index = -1);
-	COM_API BOOL COM_PrepAcqEx(CHAR index = -1);
-	COM_API BOOL COM_ExposeReqEx(CHAR index=-1);
-	COM_API BOOL COM_SetAcqEx(CHAR index = -1);
-	COM_API BOOL COM_StopEx(CHAR index = -1);
-	COM_API BOOL COM_DstEx(CHAR index = -1);
-	COM_API BOOL COM_DacqEx(CHAR index = -1);
-	COM_API BOOL COM_DacqaedEx(CHAR index = -1);
-	COM_API BOOL COM_CbctEx(CHAR index = -1);
-	COM_API BOOL COM_Cbct2Ex(CHAR index = -1);
-	COM_API BOOL COM_DexitEx(CHAR index = -1);
-	COM_API BOOL COM_DprepEx(CHAR index = -1);
-	COM_API BOOL COM_CprepEx(CHAR index = -1);
-	COM_API BOOL COM_ExprepEx(CHAR index = -1);
-	COM_API BOOL COM_AedPrepEx(CHAR index = -1);
-	COM_API BOOL COM_Aed2AcqEx(CHAR index = -1);
-	COM_API BOOL COM_ImgSaveStartEx(CHAR index = -1);
-	COM_API BOOL COM_ImgSaveExitEx(CHAR index = -1);
-	COM_API BOOL COM_ImgSavedReadEx(CHAR index = -1);
+	COM_API BOOL COM_SetPreCalibModeEx(CHAR nCalMode, CHAR index);//index = -1
+	COM_API BOOL COM_HstAcqEx(CHAR index);//index = -1
+	COM_API BOOL COM_AedAcqEx(CHAR index);//index = -1
+	COM_API BOOL COM_TriggerEx(CHAR index);//index = -1
+	COM_API BOOL COM_Trigger2Ex(CHAR index);//index = -1
+	COM_API BOOL COM_PrepEx(CHAR index);//index = -1
+	COM_API BOOL COM_AcqEx(CHAR index);//index = -1
+	COM_API BOOL COM_PrepAcqEx(CHAR index);//index = -1
+	COM_API BOOL COM_ExposeReqEx(CHAR index);//index = -1
+	COM_API BOOL COM_SetAcqEx(CHAR index);//index = -1
+	COM_API BOOL COM_StopEx(CHAR index);//index = -1
+	COM_API BOOL COM_DstEx(CHAR index);//index = -1
+	COM_API BOOL COM_DacqEx(CHAR index);//index = -1
+	COM_API BOOL COM_DacqaedEx(CHAR index);//index = -1
+	COM_API BOOL COM_CbctEx(CHAR index);//index = -1
+	COM_API BOOL COM_Cbct2Ex(CHAR index);//index = -1
+	COM_API BOOL COM_DexitEx(CHAR index);//index = -1
+	COM_API BOOL COM_DprepEx(CHAR index);//index = -1
+	COM_API BOOL COM_CprepEx(CHAR index);//index = -1
+	COM_API BOOL COM_ExprepEx(CHAR index);//index = -1
+	COM_API BOOL COM_AedPrepEx(CHAR index);//index = -1
+	COM_API BOOL COM_Aed2AcqEx(CHAR index);//index = -1
+	COM_API BOOL COM_ImgSaveStartEx(CHAR index);//index = -1
+	COM_API BOOL COM_ImgSaveExitEx(CHAR index);//index = -1
+	COM_API BOOL COM_ImgSavedReadEx(CHAR index);//index = -1
 
 	COM_API BOOL COM_RegisterEvCallBackEx(INT16 nEvent, FP_EVENT_CALLBACKEX funcallbackex);
-	COM_API BOOL COM_GetImageModeEx(TImageMode* ptImageMode, CHAR index = -1);
-	COM_API BOOL COM_GetImageModeVEx(TImageMode* ptImageMode, CHAR index = -1);
-	COM_API BOOL COM_GetImageShiftModeEx(TImageShiftMode* ptImageShiftMode, CHAR index = -1);
-	COM_API BOOL COM_GetImageNameEx(CHAR* name, CHAR index = -1);
-	COM_API BOOL COM_GetImageIDEx(UINT32 *pimgID, CHAR index = -1);
-	COM_API BOOL COM_GetImageEx(CHAR* pImageBuff, CHAR index = -1);
-	COM_API BOOL COM_GetImageVEx(CHAR* pImageBuff, CHAR index = -1);
-	COM_API BOOL COM_SetXwinEx(UINT32 xwin, CHAR index = -1);
-	COM_API BOOL COM_SetXwin_usEx(UINT32 xwin_us, CHAR index = -1);
-	COM_API BOOL COM_GetFPLicenseEx(TLicenseInfo* tLicenseInfo, CHAR choose = 0, CHAR index = -1);
-	COM_API BOOL COM_SetMetaDataEx(TMetaData tMetaData, CHAR index = -1);
-	COM_API BOOL COM_GetMetaDataEx(TMetaData* ptMetaData, CHAR index = -1);
-	COM_API UCHAR COM_GetFpPendingStateEx(CHAR index = -1);
-	COM_API BOOL COM_ClearPendingStateEx(CHAR index = -1);
+	COM_API BOOL COM_GetImageModeEx(TImageMode* ptImageMode, CHAR index);//index = -1
+	COM_API BOOL COM_GetImageModeVEx(TImageMode* ptImageMode, CHAR index);//index = -1
+	COM_API BOOL COM_GetImageShiftModeEx(TImageShiftMode* ptImageShiftMode, CHAR index);//index = -1
+	COM_API BOOL COM_GetImageNameEx(CHAR* name, CHAR index);//index = -1
+	COM_API BOOL COM_GetImageIDEx(UINT32 *pimgID, CHAR index);//index = -1
+	COM_API BOOL COM_GetImageEx(CHAR* pImageBuff, CHAR index);//index = -1
+	COM_API BOOL COM_GetImageVEx(CHAR* pImageBuff, CHAR index);//index = -1
+	COM_API BOOL COM_SetXwinEx(UINT32 xwin, CHAR index);//index = -1
+	COM_API BOOL COM_SetXwin_usEx(UINT32 xwin_us, CHAR index);//index = -1
+	COM_API BOOL COM_GetFPLicenseEx(TLicenseInfo* tLicenseInfo, CHAR choose, CHAR index);//choose = 0, index = -1
+	COM_API BOOL COM_SetMetaDataEx(TMetaData tMetaData, CHAR index);//index = -1
+	COM_API BOOL COM_GetMetaDataEx(TMetaData* ptMetaData, CHAR index);//index = -1
+	COM_API UCHAR COM_GetFpPendingStateEx(CHAR index);//index = -1
+	COM_API BOOL COM_ClearPendingStateEx(CHAR index);//index = -1
 
 	COM_API BOOL COM_GetFPsnEx(CHAR index, CHAR* psn);
-	COM_API CHAR COM_GetFPCurStatusEx(CHAR index = -1);
-	COM_API CHAR COM_GetFPWireStateEx(CHAR index = -1);
-	COM_API UINT32 COM_GetFpPowerModeEx(CHAR index = -1);
-	COM_API UCHAR COM_GetFpWorkStateEx(CHAR index = -1);
-	COM_API BOOL COM_GetFPStatusEx(TFPStat* ptFPStat, CHAR index = -1);
-	COM_API BOOL COM_GetFPStatusPEx(TFPStatex* ptFPStatex, CHAR index = -1);
-	COM_API BOOL COM_GetConnectEssidEx(CHAR* pessid, CHAR index = -1);
+	COM_API CHAR COM_GetFPCurStatusEx(CHAR index);//index = -1
+	COM_API CHAR COM_GetFPWireStateEx(CHAR index);//index = -1
+	COM_API UINT32 COM_GetFpPowerModeEx(CHAR index);//index = -1
+	COM_API UCHAR COM_GetFpWorkStateEx(CHAR index);//index = -1
+	COM_API BOOL COM_GetFPStatusEx(TFPStat* ptFPStat, CHAR index);//index = -1
+	COM_API BOOL COM_GetFPStatusPEx(TFPStatex* ptFPStatex, CHAR index);//index = -1
+	COM_API BOOL COM_GetConnectEssidEx(CHAR* pessid, CHAR index);//index = -1
 
-	COM_API BOOL COM_SetDynamicParaEx(UINT32 xwin, UINT16 repeat, CHAR binMode, CHAR sync, CHAR index = -1);
-	COM_API BOOL COM_GetDynamicParaEx(UINT32* pxwin, UINT16* prepeat, CHAR* pbinMode, CHAR* psync, CHAR index = -1);
-	COM_API BOOL COM_SetBinningModeEx(CHAR cbinningMode, CHAR index = -1);
-	COM_API BOOL COM_SetDynamicFpsEx(UINT32 fps100Set, CHAR index = -1);
-	COM_API BOOL COM_GetDynamicFpsEx(UINT32* pfps100, CHAR index = -1);
-	COM_API BOOL COM_SetDyncParaEndEx(CHAR index = -1);
-	COM_API BOOL COM_SetRoiParaEx(USHORT startRow, USHORT endRow, USHORT startCol, USHORT endCol, CHAR index = -1);
-	COM_API BOOL COM_GetRoiParaEx(USHORT* startRow, USHORT* endRow, USHORT* startCol, USHORT* endCol, CHAR index = -1);
-	COM_API BOOL COM_SetIfsRefEx(CHAR cbinningMode, UCHAR cIfs, UCHAR cRef, CHAR index = -1);
-	COM_API BOOL COM_GetIfsRefEx(CHAR cbinningMode, UCHAR* cIfs, UCHAR* cRef, CHAR index = -1);
-	COM_API BOOL COM_SetOffsetAverageNumEx(CHAR setvalue, CHAR index = -1);
-	COM_API BOOL COM_GetOffsetAverageNumEx(CHAR* psetvalue, CHAR index = -1);
+	COM_API BOOL COM_SetDynamicParaEx(UINT32 xwin, UINT16 repeat, CHAR binMode, CHAR sync, CHAR index);//index = -1
+	COM_API BOOL COM_GetDynamicParaEx(UINT32* pxwin, UINT16* prepeat, CHAR* pbinMode, CHAR* psync, CHAR index);//index = -1
+	COM_API BOOL COM_SetBinningModeEx(CHAR cbinningMode, CHAR index);//index = -1
+	COM_API BOOL COM_SetDynamicFpsEx(UINT32 fps100Set, CHAR index);//index = -1
+	COM_API BOOL COM_GetDynamicFpsEx(UINT32* pfps100, CHAR index);//index = -1
+	COM_API BOOL COM_SetDyncParaEndEx(CHAR index);//index = -1
+	COM_API BOOL COM_SetRoiParaEx(USHORT startRow, USHORT endRow, USHORT startCol, USHORT endCol, CHAR index);//index = -1
+	COM_API BOOL COM_GetRoiParaEx(USHORT* startRow, USHORT* endRow, USHORT* startCol, USHORT* endCol, CHAR index);//index = -1
+	COM_API BOOL COM_SetIfsRefEx(CHAR cbinningMode, UCHAR cIfs, UCHAR cRef, CHAR index);//index = -1
+	COM_API BOOL COM_GetIfsRefEx(CHAR cbinningMode, UCHAR* cIfs, UCHAR* cRef, CHAR index);//index = -1
+	COM_API BOOL COM_SetOffsetAverageNumEx(CHAR setvalue, CHAR index);//index = -1
+	COM_API BOOL COM_GetOffsetAverageNumEx(CHAR* psetvalue, CHAR index);//index = -1
 
-	COM_API BOOL COM_SetAllTplEx(CHAR index = -1);
-	COM_API BOOL COM_SetOffsetTplEx(CHAR* path, CHAR TplType = FP_TPL_1x1, CHAR index = -1);
-	COM_API BOOL COM_SetGainTplEx(CHAR* path, CHAR TplType = FP_TPL_1x1, CHAR index = -1);
-	COM_API BOOL COM_SetDefectTplEx(CHAR* path, CHAR TplType = FP_TPL_1x1, CHAR index = -1);
-	COM_API BOOL COM_GenOffsetTplEx(CHAR TplType = FP_TPL_1x1);
-	COM_API BOOL COM_GenGainTplEx(CHAR TplType = FP_TPL_1x1);
-	COM_API BOOL COM_GenDefectTplEx(CHAR TplType = FP_TPL_1x1);
-	COM_API BOOL COM_CalibOffsetTplEx(CHAR* pData, CHAR TplType = FP_TPL_1x1, CHAR index = -1);
-	COM_API BOOL COM_CalibGainTplEx(CHAR* pData, CHAR TplType = FP_TPL_1x1, CHAR index = -1);
-	COM_API BOOL COM_CalibDefectTplEx(CHAR* pData, CHAR TplType = FP_TPL_1x1, CHAR index = -1);
-	COM_API CHAR COM_GetFPTypeEx(CHAR index = -1);
-	COM_API BOOL COM_EditDefectTplEx(UINT16 x, UINT16 y, BOOL valid, CHAR TplType = FP_TPL_1x1);
-	COM_API BOOL COM_EditLineDefectTplEx(UINT16 line, BOOL bRow, BOOL valid, CHAR TplType = FP_TPL_1x1);
-	COM_API BOOL COM_SetAedTOffsetTplEx(CHAR* path, CHAR index = -1);
-	COM_API BOOL COM_CalibAedTTplEx(char* pData, USHORT u16LineNum, CHAR index = -1);
+	COM_API BOOL COM_SetAllTplEx(CHAR index);//index = -1
+	COM_API BOOL COM_SetOffsetTplEx(CHAR* path, CHAR TplType, CHAR index);//TplType = FP_TPL_1x1, index = -1
+	COM_API BOOL COM_SetGainTplEx(CHAR* path, CHAR TplType, CHAR index);//TplType = FP_TPL_1x1, index = -1
+	COM_API BOOL COM_SetDefectTplEx(CHAR* path, CHAR TplType, CHAR index);//TplType = FP_TPL_1x1, index = -1
+	COM_API BOOL COM_GenOffsetTplEx(CHAR TplType);//TplType = FP_TPL_1x1
+	COM_API BOOL COM_GenGainTplEx(CHAR TplType);//TplType = FP_TPL_1x1
+	COM_API BOOL COM_GenDefectTplEx(CHAR TplType);//TplType = FP_TPL_1x1
+	COM_API BOOL COM_CalibOffsetTplEx(CHAR* pData, CHAR TplType, CHAR index);//TplType = FP_TPL_1x1, index = -1
+	COM_API BOOL COM_CalibGainTplEx(CHAR* pData, CHAR TplType, CHAR index);//TplType = FP_TPL_1x1, index = -1
+	COM_API BOOL COM_CalibDefectTplEx(CHAR* pData, CHAR TplType, CHAR index);//TplType = FP_TPL_1x1, index = -1
+	COM_API CHAR COM_GetFPTypeEx(CHAR index);//index = -1
+	COM_API BOOL COM_EditDefectTplEx(UINT16 x, UINT16 y, BOOL valid, CHAR TplType);//TplType = FP_TPL_1x1
+	COM_API BOOL COM_EditLineDefectTplEx(UINT16 line, BOOL bRow, BOOL valid, CHAR TplType);//TplType = FP_TPL_1x1
+	COM_API BOOL COM_SetAedTOffsetTplEx(CHAR* path, CHAR index);//index = -1
+	COM_API BOOL COM_CalibAedTTplEx(char* pData, USHORT u16LineNum, CHAR index);//index = -1
 
-	COM_API BOOL COM_GetFPUseEx(UCHAR* pUse, CHAR index = -1);
-	COM_API BOOL COM_UseActiveEx(CHAR index = -1);
+	COM_API BOOL COM_GetFPUseEx(UCHAR* pUse, CHAR index);//index = -1
+	COM_API BOOL COM_UseActiveEx(CHAR index);//index = -1
 
 #ifdef __cplusplus
 }

@@ -9,5 +9,11 @@
   "author": {
     "name": "Mr_Tang",
     "email": "3159690335@qq.com"
-  }
+  },
+  "externalBinaries": [
+    {
+      "source": "backend/CSDK/SDK/ComApi.dll",
+      "target": "ComApi.dll"
+    }
+  ]
 }

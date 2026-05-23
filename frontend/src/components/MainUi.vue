@@ -13,7 +13,7 @@
                 </button>
 
                 <!-- 设备 -->
-                <button class="menu-item" type="button" @click="onMenuItemClick('设备')">
+                 <button class="menu-item" type="button" @click="onMenuItemClick('设备')">
                     <svg class="menu-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
                     设备
                 </button>
@@ -180,7 +180,7 @@
                         <div class='detector-display'>
 
                             <!-- 无图像显示 -->
-                            <div class='detector-placeholder'>
+                            <div v-if="!ctImage" class='detector-placeholder'>
                                 <div class='placeholder-icon'>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                         <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -190,6 +190,10 @@
                                 </div>
                                 <div class='placeholder-text'>等待图像数据...</div>
                             </div>
+
+                            <!-- 图像显示 -->
+                            <img v-else :src="ctImage" class='detector-image' alt='探测器图像' />
+                        </div>
                             
                             <!-- 探测器监控面板 -->
                             <DetectorMonitor />
@@ -426,18 +430,59 @@
             </div> -->
         </div>
     </main-container>
+    
+    <!-- 设备连接模态框 -->
+    <DeviceConnectModal :visible="showDeviceModal" @close="showDeviceModal = false" />
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
-import {WindowMinimise, 
-          WindowToggleMaximise, 
+import { WindowMinimise,
+          WindowToggleMaximise,
           Quit,
-          WindowIsMaximised, 
+          WindowIsMaximised,
           WindowUnmaximise,
+          EventsOn,
         } from '../../wailsjs/runtime/runtime'
 import DetectorPanel from './DetectorPanel.vue';
 import DetectorMonitor from './DetectorMonitor.vue';
+import DeviceConnectModal from './DeviceConnectModal.vue';
+
+//项目管理模态框状态
+const showProjectModal = ref(false);
+// 设备连接模态框状态
+const showDeviceModal = ref(false);
+// 系统状态模态框状态
+const showSettingModal = ref(false);
+//帮助模态框状态
+const showHelpModal = ref(false);
+//关于模态框状态
+const showAboutModal = ref(false);
+
+// 图像数据状态
+const ctImage = ref('');
+
+const onMenuItemClick = (option) => {
+    if (option === '项目') {
+        showProjectModal.value = true;
+    }else if (option === '设备') {
+        showDeviceModal.value = true;
+    }else if (option === '设置') {
+        showSettingModal.value = true;
+    }else if (option === '帮助') {
+        showHelpModal.value = true;
+    }else if (option === '关于') {
+        showAboutModal.value = true;
+    }
+    console.log(option);
+};
+
+// 左侧控制面板状态
+const showDetectorPanel = ref(false);
+// 切换控制面板显示
+const toggleDetectorPanel = () => {
+    showDetectorPanel.value = !showDetectorPanel.value;
+};
 
 const handleTitleBarDblClick = async () => {
     const isMax = await WindowIsMaximised()
@@ -448,26 +493,20 @@ const handleTitleBarDblClick = async () => {
     }
   }
 
-  const minimize = () => WindowMinimise()
-  const toggleMaximize = () => WindowToggleMaximise()
-  const closeApp = async () => {
-    Quit()
-    // const result = await HandleClose()
-    // if (result) {
-    //   Quit()
-    // }
-    // else{
-    //   notify.error('未知错误,系统未能正常退出', "error", 3000)
-    // }
-  }
+const minimize = () => WindowMinimise()
+const toggleMaximize = () => WindowToggleMaximise()
+const closeApp = async () => {
+Quit()
+// const result = await HandleClose()
+// if (result) {
+//   Quit()
+// }
+// else{
+//   notify.error('未知错误,系统未能正常退出', "error", 3000)
+// }
+}
 
-// 左侧控制面板状态
-const showDetectorPanel = ref(false);
 
-// 切换控制面板显示
-const toggleDetectorPanel = () => {
-    showDetectorPanel.value = !showDetectorPanel.value;
-};
 
 // 应用参数
 const handleApplyParams = (params) => {
@@ -528,7 +567,13 @@ onMounted(()=>{
     setInterval(()=>{
         Status.RunTime = new Date(new Date().getTime()-Status.StartTime-8*60*60*1000).toLocaleTimeString()
     },1000)
-})
+
+    // 监听后端ct_image事件
+    EventsOn('ct_image', (imageData) => {
+        console.log('[MainUi] 收到图像数据:', imageData ? imageData.substring(0, 100) + '...' : '空');
+        ctImage.value = imageData;
+    });
+});
 
 
 
@@ -1070,6 +1115,13 @@ left-panel {
 .placeholder-text {
     font-size: 14px;
     font-weight: 500;
+}
+
+.detector-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #0f172a;
 }
 
 .detector-footer {
