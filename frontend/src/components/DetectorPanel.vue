@@ -13,7 +13,7 @@
         <div class="panel-content">
             <!-- 曝光时间 -->
             <div class="param-group">
-                <label class="param-label">曝光时间</label>
+                <label class="param-label">探测器曝光时间</label>
                 <div class="param-input-wrap">
                     <input 
                         type="number" 
@@ -26,12 +26,34 @@
                     <span class="param-unit">ms</span>
                 </div>
                 <div class="param-slider">
-                    <input type="range" v-model.number="exposureTime" min="1" max="1000" />
+                    <input type="range" v-model.number="exposureTime" min="1" max="50000" />
                 </div>
             </div>
 
-            <!-- 管电压 -->
+            <!-- Binning模式 -->
             <div class="param-group">
+                <label class="param-label">探测器Binning</label>
+                <div class="binning-options">
+                    <button 
+                        v-for="bin in binningOptions" 
+                        :key="bin.value"
+                        class="binning-btn"
+                            
+                        :class="{ active: binningMode === bin.value }"
+                        @click="binningMode = bin.value"
+                    >
+                        {{ bin.label }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- 增益 -->
+            <div class="param-group"> 
+                <label class="param-label">探测器增益</label>
+            </div>
+
+            <!-- 管电压 -->
+            <!-- <div class="param-group">
                 <label class="param-label">管电压</label>
                 <div class="param-input-wrap">
                     <input 
@@ -47,10 +69,10 @@
                 <div class="param-slider">
                     <input type="range" v-model.number="tubeVoltage" min="40" max="150" />
                 </div>
-            </div>
+            </div> -->
 
             <!-- 管电流 -->
-            <div class="param-group">
+            <!-- <div class="param-group">
                 <label class="param-label">管电流</label>
                 <div class="param-input-wrap">
                     <input 
@@ -66,27 +88,12 @@
                 <div class="param-slider">
                     <input type="range" v-model.number="tubeCurrent" min="10" max="500" />
                 </div>
-            </div>
+            </div> -->
 
-            <!-- Binning模式 -->
-            <div class="param-group">
-                <label class="param-label">Binning模式</label>
-                <div class="binning-options">
-                    <button 
-                        v-for="bin in binningOptions" 
-                        :key="bin.value"
-                        class="binning-btn"
-                            
-                        :class="{ active: binningMode === bin.value }"
-                        @click="binningMode = bin.value"
-                    >
-                        {{ bin.label }}
-                    </button>
-                </div>
-            </div>
+            
 
             <!-- 帧率设置 -->
-            <div class="param-group">
+            <!-- <div class="param-group">
                 <label class="param-label">帧率</label>
                 <div class="param-input-wrap">
                     <input 
@@ -99,78 +106,98 @@
                     />
                     <span class="param-unit">fps</span>
                 </div>
-            </div>
+            </div> -->
 
             <!-- 图像尺寸 -->
-            <div class="param-group">
+            <!-- <div class="param-group">
                 <label class="param-label">图像尺寸</label>
                 <div class="size-info">
                     <span>{{ imageWidth }} × {{ imageHeight }}</span>
                 </div>
-            </div>
+            </div> -->
 
             <!-- 应用按钮 -->
             <div class="action-buttons">
+                <button class="get-btn" @click="getParams">
+                    获取参数
+                </button>
                 <button class="apply-btn" @click="applyParams">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-                    </svg>
                     应用参数
                 </button>
-                <button class="reset-btn" @click="resetParams">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                        <path d="M3 3v5h5"/>
-                    </svg>
+                <!-- <button class="reset-btn" @click="resetParams">
                     重置
-                </button>
+                </button> -->
             </div>
+            
         </div>
     </div>
 </template>
 
 <script setup>
 import { ref, reactive } from 'vue';
+import { 
+    DetectorSetExposeTime, 
+    DetectorGetExposeTime,
+    DetectorSetBinning,
+    DetectorGetBinning
+} from '../../wailsjs/go/main/App'
+
+
 
 const emit = defineEmits(['close', 'apply']);
 
 // 参数状态
 const exposureTime = ref(50);
-const tubeVoltage = ref(120);
-const tubeCurrent = ref(200);
-const binningMode = ref(1);
+const binningMode = ref('1×1');
 const frameRate = ref(30);
-const imageWidth = ref(3072);
-const imageHeight = ref(3072);
 
-// Binning选项
+
+
 const binningOptions = [
-    { label: '1×1', value: 1 },
-    { label: '2×2', value: 2 },
-    { label: '4×4', value: 4 },
-    { label: '8×8', value: 8 }
+    { label: '1×1', value: '1×1' },
+    { label: '2×2', value: '2×2' },
+    // { label: '3×3', value: '3×3' },
+    // { label: '4×4', value: '4×4' },
+    // { label: '6×6', value: '6×6' },
+    // { label: '8×8', value: '8×8' }
 ];
 
+const getParams = async() => {
+    console.log('getParams');
+    try {
+        const exposeTime = await DetectorGetExposeTime();
+        console.log(exposeTime);
+        exposureTime.value = exposeTime;
+    
+        const binning = await DetectorGetBinning();
+        binningMode.value = binning;
+        console.log('binningMode.value:', binningMode.value);
+        console.log('binningMode.value == "2×2":', binningMode.value == '2×2');
+    } catch (error) {
+        console.error('获取参数失败:', error);
+        return;
+    }
+}
+
 // 应用参数
-const applyParams = () => {
-    const params = {
-        exposureTime: exposureTime.value,
-        tubeVoltage: tubeVoltage.value,
-        tubeCurrent: tubeCurrent.value,
-        binningMode: binningMode.value,
-        frameRate: frameRate.value
-    };
+const applyParams = async () => {
+    console.log('applyParams');
+    try {
+        await DetectorSetExposeTime(exposureTime.value);
+
+        await DetectorSetBinning(binningMode.value);
+    } catch (error) {
+        console.error('应用参数失败:', error);
+        return;
+    }
     emit('apply', params);
 };
 
-// 重置参数
-const resetParams = () => {
-    exposureTime.value = 50;
-    tubeVoltage.value = 120;
-    tubeCurrent.value = 200;
-    binningMode.value = 1;
-    frameRate.value = 30;
-};
+defineExpose({
+    getParams
+});
+
+
 </script>
 
 <style scoped>
@@ -340,8 +367,9 @@ const resetParams = () => {
     margin-top: 24px;
 }
 
-.apply-btn,
-.reset-btn {
+.get-btn,
+.apply-btn 
+{
     flex: 1;
     display: flex;
     align-items: center;
@@ -366,13 +394,13 @@ const resetParams = () => {
     box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
 }
 
-.reset-btn {
+.get-btn {
     background: rgba(148, 163, 184, 0.2);
     color: #94a3b8;
     border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
-.reset-btn:hover {
+.get-btn:hover {
     background: rgba(148, 163, 184, 0.3);
     color: #ffffff;
 }

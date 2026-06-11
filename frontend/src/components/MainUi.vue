@@ -140,16 +140,24 @@
                     <div class="status-card network-card">
                         <div class="card-header">
                             <span class="card-title">探测器状态</span>
-                            <span class="card-status status-connected">已连接</span>
+                            <span class="card-status status-connected">{{ Status.Detector.runing ? '运行中' : '未连接' }}</span>
                         </div>
                         <div class="card-body">
                             <div class="info-row">
-                                <span class="info-label">IP地址</span>
-                                <span class="info-value">192.168.1.100</span>
+                                <span class="info-label">SN</span>
+                                <span class="info-value">{{ Status.Detector.sn }}</span>
                             </div>
                             <div class="info-row">
-                                <span class="info-label">连接类型</span>
-                                <span class="info-value">Ethernet</span>
+                                <span class="info-label">当前模式</span>
+                                <span class="info-value">{{ Status.Detector.mode }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">探测器温度</span>
+                                <span class="info-value">{{ Status.Detector.tempreture.toFixed(2) }} °C</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">表面湿度</span>
+                                <span class="info-value">{{ Status.Detector.humidity.toFixed(2) }}%</span>
                             </div>
                         </div>
                     </div>
@@ -167,8 +175,8 @@
                 
                 <!-- 左侧探测器控制面板 -->
                 <transition name="slide" >
-                    <div v-if="showDetectorPanel" class="detector-panel-container">
-                        <DetectorPanel @close="showDetectorPanel = false" @apply="handleApplyParams" />
+                    <div v-if="showDetectorPanel" class="detector-panel-container" >
+                        <DetectorPanel ref="detectorPanelRef" @close="showDetectorPanel = false" @apply="handleApplyParams" />
                     </div>
                 </transition>
                 
@@ -196,7 +204,15 @@
                         </div>
                             
                             <!-- 探测器监控面板 -->
-                            <DetectorMonitor />
+                            <DetectorMonitor 
+                            :sn="Status.Detector.sn"
+                            :mode="Status.Detector.mode"
+                            :tempreture="Status.Detector.tempreture"
+                            :humidity="Status.Detector.humidity"
+                            :exposureTime="Status.Detector.exposureTime"
+                            :angle="Status.Stage.R" 
+                            :imageWidth="imageWidth" 
+                            :imageHeight="imageHeight"  />
                         </div>
 
                         <!-- 历史预览图片 -->
@@ -216,7 +232,7 @@
                  <div class="control-section">
                     <div class="section-title">采集控制</div>
                     <div class="button-grid">
-                        <button class="action-btn primary-btn">
+                        <button class="action-btn primary-btn" @click="handleCTScan">
                             <svg class="btn-svg" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M8 5v14l11-7z"/>
                             </svg>
@@ -234,7 +250,7 @@
                             </svg>
                             <span class="btn-text">停止采集</span>
                         </button>
-                        <button class="action-btn info-btn">
+                        <button class="action-btn info-btn" @click="handleSingleScan">
                             <svg class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                                 <circle cx="12" cy="13" r="4"/>
@@ -254,19 +270,20 @@
                     <button 
                         type="button" 
                         class="mode-tab" 
-                        :class="{ active: motionMode === 'absolute' }" 
-                        @click="motionMode = 'absolute'"
-                    >
-                        绝对运动
-                    </button>
-                    <button 
-                        type="button" 
-                        class="mode-tab" 
                         :class="{ active: motionMode === 'relative' }" 
                         @click="motionMode = 'relative'"
                     >
                         相对运动
                     </button>
+                    <button 
+                        type="button" 
+                        class="mode-tab" 
+                        :class="{ active: motionMode === 'absolute' }" 
+                        @click="motionMode = 'absolute'"
+                    >
+                        绝对运动
+                    </button>
+                   
                 </div>
 
                 <!-- 四轴数值输入 -->
@@ -274,47 +291,55 @@
                     <div class="axis-input-item">
                         <span class="axis-input-label">X</span>
                         <div class="axis-input-wrapper">
-                            <input type="number" step="0.001" v-model.number="motionTargets.X" />
+                            <input 
+                                type="number" 
+                                step="0.001" 
+                                v-model.number="motionTargets.X" 
+                                @keyup.enter="handleExecuteMotion('X', motionTargets.X)"
+                                :class="{ 'highlight-input': isInputModified('X') }"
+                            />
                             <span class="axis-unit">mm</span>
                         </div>
                     </div>
                     <div class="axis-input-item">
                         <span class="axis-input-label">Y</span>
                         <div class="axis-input-wrapper">
-                            <input type="number" step="0.001" v-model.number="motionTargets.Y" />
+                            <input 
+                                type="number" 
+                                step="0.001" 
+                                v-model.number="motionTargets.Y" 
+                                @keyup.enter="handleExecuteMotion('Y', motionTargets.Y)"
+                                :class="{ 'highlight-input': isInputModified('Y') }"
+                            />
                             <span class="axis-unit">mm</span>
                         </div>
                     </div>
                     <div class="axis-input-item">
                         <span class="axis-input-label">Z</span>
                         <div class="axis-input-wrapper">
-                            <input type="number" step="0.001" v-model.number="motionTargets.Z" />
+                            <input 
+                                type="number" 
+                                step="0.001" 
+                                v-model.number="motionTargets.Z" 
+                                @keyup.enter="handleExecuteMotion('Z', motionTargets.Z)"
+                                :class="{ 'highlight-input': isInputModified('Z') }"
+                            />
                             <span class="axis-unit">mm</span>
                         </div>
                     </div>
                     <div class="axis-input-item">
                         <span class="axis-input-label">R</span>
                         <div class="axis-input-wrapper">
-                            <input type="number" step="0.001" v-model.number="motionTargets.R" />
+                            <input 
+                                type="number" 
+                                step="0.001" 
+                                v-model.number="motionTargets.R" 
+                                @keyup.enter="handleExecuteMotion('R', motionTargets.R)"
+                                :class="{ 'highlight-input': isInputModified('R') }"
+                            />
                             <span class="axis-unit">°</span>
                         </div>
                     </div>
-                </div>
-
-                <!-- 动作执行按钮 -->
-                <div class="motion-actions">
-                    <button type="button" class="motion-btn exec-btn" @click="handleExecuteMotion">
-                        <svg class="btn-svg-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                            <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                        执行
-                    </button>
-                    <button type="button" class="motion-btn stop-btn" @click="handleStopMotion">
-                        <svg class="btn-svg-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                        </svg>
-                        停止
-                    </button>
                 </div>
             </div>
                     
@@ -323,32 +348,48 @@
 
                 <!-- 位移台点动按钮 -->
                 <div class="sector-container">
-                    <div class="bigbox s5" @click="handleSectorClick('Z+')">
+                    <div class="bigbox s5" 
+                    @mousedown="handleSectorPress('Z',10)" 
+                    @mouseup="handleSectorRelease('Z')">
                         <span class="sector-text">Z+</span>
                     </div>
-                    <div class="bigbox s6" @click="handleSectorClick('R+')">
+                    <div class="bigbox s6"
+                    @mousedown="handleSectorPress('R',10)" 
+                    @mouseup="handleSectorRelease('R')">
                         <span class="sector-text">R+</span>
                     </div>
-                    <div class="bigbox s7" @click="handleSectorClick('R-')">
+                    <div class="bigbox s7" 
+                    @mousedown="handleSectorPress('R', -10)" 
+                    @mouseup="handleSectorRelease('R')">
                         <span class="sector-text">R-</span>
                     </div>
-                    <div class="bigbox s8" @click="handleSectorClick('Z-')">
+                    <div class="bigbox s8" 
+                    @mousedown="handleSectorPress('Z', -10)" 
+                    @mouseup="handleSectorRelease('Z')">
                         <span class="sector-text">Z-</span>
                     </div>
                     <div class="sector">
-                        <div class="box s1" @click="handleSectorClick('Y+')">
+                        <div class="box s1" 
+                        @mousedown="handleSectorPress('Y',10)" 
+                        @mouseup="handleSectorRelease('Y')">
                             <span class="sector-text">Y+</span>
                         </div>
-                        <div class="box s2" @click="handleSectorClick('X+')">
+                        <div class="box s2" 
+                        @mousedown="handleSectorPress('X',10)" 
+                        @mouseup="handleSectorRelease('X')">
                             <span class="sector-text">X+</span>
                         </div>
-                        <div class="box s3" @click="handleSectorClick('Y-')">
+                        <div class="box s3" 
+                        @mousedown="handleSectorPress('Y',-10)" 
+                        @mouseup="handleSectorRelease('Y')">
                             <span class="sector-text">Y-</span>
                         </div>
-                        <div class="box s4" @click="handleSectorClick('X-')">
+                        <div class="box s4" 
+                        @mousedown="handleSectorPress('X',-10)" 
+                        @mouseup="handleSectorRelease('X')">
                             <span class="sector-text">X-</span>
                         </div>
-                        <div class="center" @click="handleSectorClick('STOP')">
+                        <div class="center" @click="handleStop">
                             <span class="sector-text">STOP </span>
                         </div>
                     </div>
@@ -490,8 +531,12 @@ import { WindowMinimise,
 import DetectorPanel from './DetectorPanel.vue';
 import DetectorMonitor from './DetectorMonitor.vue';
 import DeviceConnectModal from './DeviceConnectModal.vue';
-
-import { APIUpdate } from '../../wailsjs/go/main/App'
+import { 
+    APIUpdate, 
+    DetectorContinuousScan, DetectorSingleScan,
+    StartCTScan, CTPauseScan, ContinueCTScan, StopCTScan,
+    StageMoveJog, StageStop, StageMoveRel,StageMoveAbs,
+} from '../../wailsjs/go/main/App'
 
 //项目管理模态框状态
 const showProjectModal = ref(false);
@@ -503,7 +548,6 @@ const showSettingModal = ref(false);
 const showHelpModal = ref(false);
 //关于模态框状态
 const showAboutModal = ref(false);
-
 // 更新模态框状态
 const showUpdateModal = ref(false);
 
@@ -518,6 +562,9 @@ const handleUpdate = () => {
 
 // 图像数据状态
 const ctImage = ref('');
+// 图像尺寸状态
+const imageWidth = ref(1024);
+const imageHeight = ref(1024);
 
 const onMenuItemClick = (option) => {
     if (option === '项目') {
@@ -536,9 +583,17 @@ const onMenuItemClick = (option) => {
 
 // 左侧控制面板状态
 const showDetectorPanel = ref(false);
+const detectorPanelRef = ref();
 // 切换控制面板显示
 const toggleDetectorPanel = () => {
     showDetectorPanel.value = !showDetectorPanel.value;
+    if (showDetectorPanel.value) {
+        nextTick(() => {
+            if (detectorPanelRef.value) {
+                detectorPanelRef.value.getParams();
+            }
+        });
+    }
 };
 
 const handleTitleBarDblClick = async () => {
@@ -550,27 +605,11 @@ const handleTitleBarDblClick = async () => {
     }
   }
 
+
 const minimize = () => WindowMinimise()
 const toggleMaximize = () => WindowToggleMaximise()
-const closeApp = async () => {
-Quit()
-// const result = await HandleClose()
-// if (result) {
-//   Quit()
-// }
-// else{
-//   notify.error('未知错误,系统未能正常退出', "error", 3000)
-// }
-}
+const closeApp = async () => Quit()
 
-
-
-// 应用参数
-const handleApplyParams = (params) => {
-    console.log('[探测器参数] 应用参数:', params);
-    // 这里可添加你的 Wails API 调用，将参数发送给后端
-    // window.go.main.App.SetDetectorParams(params);
-};
 
 const Status = reactive({
     Power:{
@@ -584,11 +623,21 @@ const Status = reactive({
         runing: false
     },
     Stage:{
-        X:0.001,
-        Y:0.002,
-        Z:0.003,
-        R:0.004,
+        X:0.000,
+        Y:0.000,
+        Z:0.000,
+        R:0.000,
         runing: false
+    },
+    Detector:{
+        runing: false,
+        sn:'',//设备序列号
+        width: 0,//图像宽度
+        height: 0,//图像高度
+        tempreture: 0.0,//温度
+        humidity: 0.0,//湿度
+        exposureTime: 0.0,//曝光时间
+        mode:'ERROR',//采集模式
     },
     SystemStatus: '正常',
     RunTime: '00:00:00',
@@ -597,7 +646,7 @@ const Status = reactive({
     CPUUsage: '23%'
 })
 
-const motionMode = ref('absolute'); // 'absolute' (绝对运动) 或 'relative' (相对运动)
+const motionMode = ref('relative'); // 'absolute' (绝对运动) 或 'relative' (相对运动)
 
 const motionTargets = reactive({
     X: 0.000,
@@ -606,18 +655,150 @@ const motionTargets = reactive({
     R: 0.000
 });
 
-// 执行定位运动
-const handleExecuteMotion = () => {
-    console.log(`[定位运动] 模式: ${motionMode.value} | 目标位置:`, { ...motionTargets });
-    // 这里可添加你的 Wails API 调用，例如：
-    // window.go.main.App.MoveTo(motionMode.value, motionTargets.X, motionTargets.Y, motionTargets.Z, motionTargets.R);
+// 记录输入框是否被修改
+const inputModified = reactive({
+    X: false,
+    Y: false,
+    Z: false,
+    R: false
+});
+
+// 检测输入框是否被修改
+const isInputModified = (axis) => {
+    return inputModified[axis];
 };
 
-// 紧急停止运动
-const handleStopMotion = () => {
-    console.log('[定位运动] 触发停止');
-    // window.go.main.App.EmergencyStop();
+// 监听输入框值的变化
+watch(() => motionTargets.X, () => { inputModified.X = true; });
+watch(() => motionTargets.Y, () => { inputModified.Y = true; });
+watch(() => motionTargets.Z, () => { inputModified.Z = true; });
+watch(() => motionTargets.R, () => { inputModified.R = true; });
+
+// 监听运动模式切换
+watch(motionMode, (newMode) => {
+    if (newMode === 'absolute') {
+        // 切换到绝对运动时，将输入框的值设置为当前 Stage 位置
+        motionTargets.X = Status.Stage.X;
+        motionTargets.Y = Status.Stage.Y;
+        motionTargets.Z = Status.Stage.Z;
+        motionTargets.R = Status.Stage.R;
+        // 清除修改状态
+        inputModified.X = false;
+        inputModified.Y = false;
+        inputModified.Z = false;
+        inputModified.R = false;
+    }
+});
+
+const handleSectorPress = async (axis,speed) => {
+    try {
+        await StageMoveJog(axis, speed);
+    } catch (error) {
+        console.error(`[定位运动] 错误: ${error}`);
+    }
 };
+
+const handleSectorRelease = async (axis) => {
+    try {
+        await StageStop(axis);
+    } catch (error) {
+        console.error(`[定位运动] 错误: ${error}`);
+    }
+};
+
+const handleStop = async () => {
+    try {
+        await StageStop('X');
+        await StageStop('Y');
+        await StageStop('Z');
+        await StageStop('R');
+    } catch (error) {
+        console.error(`[定位运动] 错误: ${error}`);
+    }
+};
+
+const handleRelativeMotion = async (axis, rel_length) => { 
+    try {
+        await StageMoveRel(axis, rel_length);
+    } catch (error) {
+        console.error(`[定位运动] 错误: ${error}`);
+    }
+};
+
+const handleAbsoluteMotion = async (axis, length) => { 
+    try {
+        await StageMoveAbs(axis, length);
+    } catch (error) {
+        console.error(`[定位运动] 错误: ${error}`);
+    }
+};
+
+// 执行定位运动
+const handleExecuteMotion = (axis, length) => {
+    // alert(`[定位运动] ${axis} 轴运动到 ${length} mm, 运动方式${motionMode.value}`);
+    if(motionMode.value === 'relative'){
+        handleRelativeMotion(axis, length);
+    }else if(motionMode.value === 'absolute'){
+        handleAbsoluteMotion(axis, length);
+    }else{
+        console.error('[定位运动] 错误: 无效的 motionMode');
+    }
+    // 执行后清除该轴的修改状态
+    inputModified[axis] = false;
+};
+
+//连续触发函数
+const handleContinuousScan = async () => { 
+    try {
+        await DetectorContinuousScan()
+    } catch (error) {
+        console.error('开始采集失败:', error);
+    }
+};
+
+//开始CT扫描
+const handleCTScan = async () => { 
+    try {
+        await StartCTScan("D:/appfile/code/vs/CTSystem/test")
+    } catch (error) {
+        console.error('开始CT扫描失败:', error);
+    }
+};
+
+const handleCTPause = async () => { 
+    try {
+        await CTPauseScan()
+    } catch (error) {
+        console.error('暂停CT扫描失败:', error);
+    }
+};
+
+const handleCTContinue = async () => { 
+    try {
+        await ContinueCTScan()
+    } catch (error) {
+        console.error('继续CT扫描失败:', error);
+    }
+};
+
+const handleCTStop = async () => { 
+    try {
+        await StopCTScan()
+    } catch (error) {
+        console.error('停止CT扫描失败:', error);
+    }
+};
+
+//单次触发采集
+const handleSingleScan = async () => { 
+    try {
+        await DetectorSingleScan()
+    } catch (error) {
+        console.error('开始采集失败:', error);
+    }
+};
+
+
 
 
 const updateInfo = ref({
@@ -626,29 +807,61 @@ const updateInfo = ref({
 })
 
 onMounted(async () =>{
+    // 监听后端ct_linked事件
+    EventsOn('ct_linked', (data) => {
+        Status.Detector.runing = data.ct_linked
+    });
+
+    EventsOn('stage_linked', (data) => {
+        Status.Stage.runing = data.stage_linked
+    });
+
+    // 监听后端ct_image事件
+    EventsOn('ct_image', (data) => {
+        ctImage.value = data.image;
+        // 更新图像尺寸
+        if (data.width) {
+            Status.Detector.width = parseInt(data.width);
+            imageWidth.value = Status.Detector.width;
+        }
+        if (data.height) {
+            Status.Detector.height = parseInt(data.height);
+            imageHeight.value = Status.Detector.height;
+        }
+    });
+
+    EventsOn('motor_details', (data) => {
+        Status.Stage.X = data.X
+        Status.Stage.Y = data.Y
+        Status.Stage.Z = data.Z
+        Status.Stage.R = data.R
+    });
+
+    EventsOn('ct_heartbeat', (data) => {
+        // alert(data.sn)
+        Status.Detector.tempreture = data.tempreture
+        Status.Detector.humidity = data.humidity
+        Status.Detector.mode = data.mode
+        Status.Detector.sn = data.sn
+    });
+
+    //检查更新
     const release = await APIUpdate()
     if (release) {
         updateInfo.value.tagName = release.tag_name
         updateInfo.value.htmlUrl = release.html_url
-        if (release.assets.length > 0) {
-            updateInfo.value.htmlUrl = release.assets[0].browser_download_url
-        }
+        updateInfo.value.htmlUrl = release.assets[0].browser_download_url
         // 显示更新模态框
         showUpdateModal.value = true
     }
+    
 
+    //系统运行时间计时器
     Status.StartTime = new Date().getTime()
     setInterval(()=>{
         Status.RunTime = new Date(new Date().getTime()-Status.StartTime-8*60*60*1000).toLocaleTimeString()
     },1000)
-
-    // 监听后端ct_image事件
-    EventsOn('ct_image', (imageData) => {
-        console.log('[MainUi] 收到图像数据:', imageData ? imageData.substring(0, 100) + '...' : '空');
-        ctImage.value = imageData;
-    });
 });
-
 
 
 
@@ -1807,6 +2020,13 @@ left-panel {
     padding: 0 4px;
     outline: none;
     text-align: right;
+}
+
+/* 输入框黄色高亮样式 */
+.axis-input-wrapper input.highlight-input {
+    background: rgba(255, 193, 7, 0.3);
+    color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(255, 193, 7, 0.6);
 }
 
 /* 隐藏 Chrome 等浏览器 input[type=number] 的微调按钮 */

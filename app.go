@@ -8,11 +8,18 @@ package main
 
 import (
 	update "CTSystem/backend"
-	sdk "CTSystem/backend/CSDK"
 	DEVICE "CTSystem/backend/components"
 	"context"
+	"encoding/base64"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
 	"time"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
@@ -25,14 +32,25 @@ type App struct {
 	motor *DEVICE.MotorDevice
 	hvps  *DEVICE.HVPSDevice
 	ray   *DEVICE.RaySource160keV
+
+	// CT扫描相关
+	ctScanMutex         sync.Mutex
+	ctScanRunning       bool
+	ctScanPaused        bool
+	ctScanStopRequested bool
+	ctScanPausedAngle   float32
+	ctScanImageCount    int
+	ctScanPath          string
+
+	// 图像事件通道（用于同步等待图像）
+	ctImageChan chan struct{}
 }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
 	return &App{
-		motor: DEVICE.NewMotorDevice(),
-		hvps:  DEVICE.NewHVPSDevice(),
-		ray:   DEVICE.NewRaySource160keV(),
+		hvps: DEVICE.NewHVPSDevice(),
+		ray:  DEVICE.NewRaySource160keV(),
 	}
 }
 
@@ -44,8 +62,19 @@ func (a *App) startup(ctx context.Context) {
 
 	//创建CT设备
 	a.ct = DEVICE.NewCTDevice(a.ctx)
+
+	a.motor = DEVICE.NewMotorDevice(a.ctx)
 	//初始化CT
 	a.ct.InitCT()
+
+	// 监听ct_image事件
+	runtime.EventsOn(ctx, "ct_image", func(optionalData ...interface{}) {
+		if len(optionalData) > 0 {
+			if data, ok := optionalData[0].(map[string]string); ok {
+				a.handleCTImageEvent(data)
+			}
+		}
+	})
 }
 
 func (a *App) APIUpdate() update.GitHubRelease {
@@ -66,47 +95,42 @@ func (a *App) GetCachedRelease() update.GitHubRelease {
 // 与前端通信的API区域
 // 8888888888888888888888888888888888888888    位移台    8888888888888888888888888888888888888888888888
 // 打开位移台
-func (a *App) StageOpenDevice(ip string) string {
+func (a *App) StageOpenDevice(ip string) error {
 	err := a.motor.Connect(ip)
 	if err != nil {
 		fmt.Printf("位移台连接失败: %v\n", err)
-		return fmt.Sprintf("失败: %v", err)
+		return err
 	}
 	fmt.Printf("位移台连接成功: %s\n", ip)
-	return "成功"
+	return nil
 }
 
 // 关闭位移台
-func (a *App) StageCloseDevice() {
+func (a *App) StageCloseDevice() error {
 	a.motor.Disconnect()
 	fmt.Println("位移台已关闭")
+	return nil
 }
 
 // 位移台轴(轴号：XYZR)点动
-func (a *App) StageAxisPulse(axis string, dir bool) {
-	speed := float32(1.0)
-	if !dir {
-		speed = -1.0
-	}
-	a.motor.MotorJogMove(axis, speed)
-	fmt.Printf("位移台[%s]轴点动: %s\n", axis, map[bool]string{true: "正向", false: "反向"}[dir])
-}
-
-// 位移台轴相对位置运动，传入轴号与距离
-func (a *App) StageMoveRel(axis string, distance float64) {
-	a.motor.MotorRelMove(axis, float32(distance), float32(100))
-	fmt.Printf("位移台[%s]轴相对运动: %.2f\n", axis, distance)
+func (a *App) StageMoveJog(axis string, speed float32) error {
+	return a.motor.MotorJogMove(axis, speed)
 }
 
 // 位移台停止运动
-func (a *App) StageStop(axis string) {
-	a.motor.MotorStop(axis)
-	fmt.Printf("位移台[%s]轴停止\n", axis)
+func (a *App) StageStop(axis string) error {
+	return a.motor.MotorStop(axis)
+}
+
+// 位移台轴相对位置运动，传入轴号与距离
+func (a *App) StageMoveRel(axis string, distance float32) {
+	a.motor.MotorRelMove(axis, distance)
+	fmt.Printf("位移台[%s]轴相对运动: %.2f\n", axis, distance)
 }
 
 // 位移台回零
-func (a *App) StageAxisAbs(axis string) {
-	a.motor.MotorAbs(axis)
+func (a *App) StageMoveAbs(axis string, distance float32) {
+	a.motor.MotorAbsMove(axis, distance)
 	fmt.Printf("位移台[%s]轴回零\n", axis)
 }
 
@@ -243,48 +267,64 @@ func (a *App) HighVoltageFilamentOff() string {
 }
 
 // 8888888888888888888888888888888888888888   CT探测器   8888888888888888888888888888888888888888888888
-
-// 获取探测器列表
-func (a *App) DetectorGetList() []string {
-	// devices := a.ct.GetDeviceNames()
-	// var names []string
-	// for _, dev := range devices.FpList {
-	// 	names = append(names, fmt.Sprintf("%s", dev.SzName))
-	// }
-	return []string{}
-}
-
 // 连接探测器
-func (a *App) DetectorConnect(index int) string {
-	err := a.ct.Connect(sdk.Char(index))
+func (a *App) DetectorConnect() error {
+	err := a.ct.Connect()
 	if err != nil {
 		fmt.Printf("探测器连接失败: %v\n", err)
-		return fmt.Sprintf("失败: %v", err)
+		return err
 	}
-	fmt.Printf("探测器连接成功: index=%d\n", index)
-	return "成功"
+
+	return nil
 }
 
 // 断开探测器
-func (a *App) DetectorDisconnect() string {
+func (a *App) DetectorDisconnect() error {
 	err := a.ct.Disconnect()
 	if err != nil {
 		fmt.Printf("探测器断开失败: %v\n", err)
-		return fmt.Sprintf("失败: %v", err)
+		return err
 	}
-	fmt.Println("探测器已断开")
-	return "成功"
-}
-
-// 探测器软件触发一张
-func (a *App) DetectorSoftwareTrigger() {
-	fmt.Println("探测器软件触发")
-	// TODO: 实现触发逻辑
+	return nil
 }
 
 // 获取探测器连接状态
 func (a *App) DetectorIsConnected() bool {
 	return a.ct.IsConnecting
+}
+
+// CT探测器连续触发
+func (a *App) DetectorContinuousScan() error {
+	fmt.Println("CT连续扫描触发")
+	return a.ct.ContinuousTrigger()
+}
+
+// CT探测器单次触发
+func (a *App) DetectorSingleScan() error {
+	fmt.Println("CT单次触发")
+	return a.ct.DetectorSingleScan()
+}
+
+// 设置CT探测器曝光时间
+func (a *App) DetectorSetExposeTime(exposeTime int) error {
+	fmt.Println("CT曝光曝光时间")
+	return a.ct.DetectorSetExposeTime(exposeTime)
+}
+
+// 获取CT探测器曝光时间
+func (a *App) DetectorGetExposeTime() int {
+	return a.ct.DetectorGetExposeTime()
+}
+
+// 设置binning
+func (a *App) DetectorSetBinning(binning string) error {
+	fmt.Printf("CT设置binning: %s\n", binning)
+	return a.ct.DetectorSetBinning(binning)
+}
+
+// 获取binning
+func (a *App) DetectorGetBinning() string {
+	return a.ct.DetectorGetBinning()
 }
 
 // 8888888888888888888888888888888888888888   射线源   8888888888888888888888888888888888888888888888
@@ -425,15 +465,269 @@ func (a *App) RaySourceIsConnected() bool {
 	return a.ray.IsSerialOpen()
 }
 
+// 8888888888888888888888888888888888888888   CT联测   8888888888888888888888888888888888888888888888
+
 // 开启CT连续扫描
-func (a *App) DetectorEnableContinuousScan() {
-	//开启循环，初始采集一张探测器图片，后将R轴运动1度，再采集一张图片，直到R轴运动360度
-	for i := 0; i < 360; i++ {
-		// 采集一张图片
-		a.motor.MotorRelMove("R", 1, 1)
-		time.Sleep(time.Second) //等待R轴运动完成
-		a.DetectorSoftwareTrigger()
-		time.Sleep(2 * time.Second) //等待探测器软件触发完成
+func (a *App) StartCTScan(path string) error {
+	fmt.Printf("[CT扫描] 开始扫描到路径: %s\n", path)
+	a.ctScanMutex.Lock()
+	defer a.ctScanMutex.Unlock()
+
+	if a.ctScanRunning {
+		return fmt.Errorf("CT扫描已经在运行中")
 	}
-	fmt.Println("CT连续扫描已开启")
+
+	// 初始化扫描状态
+	a.ctScanRunning = true
+	a.ctScanPaused = false
+	a.ctScanStopRequested = false
+	a.ctScanPausedAngle = 0
+	a.ctScanImageCount = 0
+	a.ctScanPath = path
+
+	// 创建图像事件通道（带缓冲，避免阻塞）
+	a.ctImageChan = make(chan struct{}, 10)
+
+	// 确保输出目录存在
+	if err := os.MkdirAll(path, 0755); err != nil {
+		fmt.Printf("[CT扫描] 创建输出目录失败: %v\n", err)
+		return fmt.Errorf("创建输出目录失败: %v", err)
+	}
+
+	// 启动扫描goroutine
+	go a.runCTScan()
+
+	runtime.EventsEmit(a.ctx, "ct_scan_status", map[string]interface{}{
+		"running": true,
+		"paused":  false,
+		"message": "CT扫描已启动",
+	})
+
+	return nil
+}
+
+// 运行CT扫描循环
+func (a *App) runCTScan() {
+	// 获取当前R轴位置
+	currentR := a.motor.GetLengths()["R"]
+	fmt.Printf("[CT扫描] 当前R位置: %.2f°\n", currentR)
+
+	// 计算需要扫描的角度数量
+	anglesToScan := int(360.0 - currentR)
+	fmt.Printf("[CT扫描] 需要扫描 %d 个角度\n", anglesToScan)
+
+	for i := 0; i < anglesToScan; i++ {
+		a.ctScanMutex.Lock()
+		if a.ctScanStopRequested {
+			a.ctScanRunning = false
+			a.ctScanMutex.Unlock()
+			fmt.Println("[CT扫描] 扫描已停止")
+			runtime.EventsEmit(a.ctx, "ct_scan_status", map[string]interface{}{
+				"running": false,
+				"paused":  false,
+				"message": "CT扫描已停止",
+			})
+			return
+		}
+
+		if a.ctScanPaused {
+			a.ctScanMutex.Unlock()
+			fmt.Println("[CT扫描] 扫描已暂停")
+			runtime.EventsEmit(a.ctx, "ct_scan_status", map[string]interface{}{
+				"running": false,
+				"paused":  true,
+				"message": "CT扫描已暂停",
+			})
+			return
+		}
+		a.ctScanMutex.Unlock()
+
+		// 运动R轴1度
+		fmt.Printf("[CT扫描] 运动R轴1度 (第%d次)\n", i+1)
+		err := a.motor.MotorRelMove("R", 1.0)
+		if err != nil {
+			fmt.Printf("[CT扫描] 运动R轴失败: %v\n", err)
+			continue
+		}
+
+		// 等待运动完成
+		time.Sleep(1 * time.Second)
+
+		// 执行单次扫描
+		fmt.Printf("[CT扫描] 执行单次扫描 (第%d次)\n", i+1)
+		err = a.ct.DetectorSingleScan()
+		if err != nil {
+			fmt.Printf("[CT扫描] 扫描失败: %v\n", err)
+			continue
+		}
+
+		// 等待图像事件（最多等待10秒）
+		fmt.Printf("[CT扫描] 等待图像 (第%d次)\n", i+1)
+		select {
+		case <-a.ctImageChan:
+			// 图像已收到，继续下一次循环
+			fmt.Printf("[CT扫描] 图像已收到 (第%d次)\n", i+1)
+		case <-time.After(10 * time.Second):
+			// 超时，报错并结束扫描
+			fmt.Printf("[CT扫描] 等待图像超时(10秒)，结束扫描\n")
+			a.ctScanMutex.Lock()
+			a.ctScanRunning = false
+			a.ctScanMutex.Unlock()
+			runtime.EventsEmit(a.ctx, "ct_scan_status", map[string]interface{}{
+				"running": false,
+				"paused":  false,
+				"message": "CT扫描失败：等待图像超时",
+			})
+			return
+		}
+	}
+
+	a.ctScanMutex.Lock()
+	a.ctScanRunning = false
+	a.ctScanMutex.Unlock()
+
+	fmt.Println("[CT扫描] 扫描完成")
+	runtime.EventsEmit(a.ctx, "ct_scan_status", map[string]interface{}{
+		"running": false,
+		"paused":  false,
+		"message": "CT扫描已完成",
+	})
+}
+
+// 暂停CT扫描
+func (a *App) CTPauseScan() error {
+	a.ctScanMutex.Lock()
+	defer a.ctScanMutex.Unlock()
+
+	if !a.ctScanRunning {
+		return fmt.Errorf("CT扫描未在运行")
+	}
+
+	if a.ctScanPaused {
+		return fmt.Errorf("CT扫描已经暂停")
+	}
+
+	// 记录当前R位置
+	currentR := a.motor.GetLengths()["R"]
+	a.ctScanPausedAngle = float32(currentR)
+	fmt.Printf("[CT扫描] 暂停扫描，记录R位置: %.2f°\n", a.ctScanPausedAngle)
+
+	a.ctScanPaused = true
+
+	runtime.EventsEmit(a.ctx, "ct_scan_status", map[string]interface{}{
+		"running": false,
+		"paused":  true,
+		"message": "CT扫描已暂停",
+	})
+
+	return nil
+}
+
+// 继续CT扫描
+func (a *App) ContinueCTScan() error {
+	a.ctScanMutex.Lock()
+	defer a.ctScanMutex.Unlock()
+
+	if !a.ctScanPaused {
+		return fmt.Errorf("CT扫描未暂停")
+	}
+
+	// 恢复扫描状态
+	a.ctScanPaused = false
+	a.ctScanRunning = true
+
+	// 启动扫描goroutine
+	go a.runCTScan()
+
+	runtime.EventsEmit(a.ctx, "ct_scan_status", map[string]interface{}{
+		"running": true,
+		"paused":  false,
+		"message": "CT扫描已继续",
+	})
+
+	return nil
+}
+
+// 停止CT扫描
+func (a *App) StopCTScan() error {
+	a.ctScanMutex.Lock()
+	defer a.ctScanMutex.Unlock()
+
+	if !a.ctScanRunning && !a.ctScanPaused {
+		return fmt.Errorf("CT扫描未在运行")
+	}
+
+	fmt.Println("[CT扫描] 请求停止扫描")
+	a.ctScanStopRequested = true
+	a.ctScanPaused = false
+	a.ctScanRunning = false
+
+	runtime.EventsEmit(a.ctx, "ct_scan_status", map[string]interface{}{
+		"running": false,
+		"paused":  false,
+		"message": "CT扫描已停止",
+	})
+
+	return nil
+}
+
+// 处理CT图像事件
+func (a *App) handleCTImageEvent(data map[string]string) {
+	var shouldSignal bool
+
+	a.ctScanMutex.Lock()
+	// 只有在扫描运行时才保存图像
+	if !a.ctScanRunning || a.ctScanPaused {
+		a.ctScanMutex.Unlock()
+		return
+	}
+
+	imageBase64 := data["image"]
+	width := data["width"]
+	height := data["height"]
+
+	// 解码Base64图像
+	imageData, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(imageBase64, "data:image/jpeg;base64,"))
+	if err != nil {
+		fmt.Printf("[CT扫描] 解码图像失败: %v\n", err)
+		a.ctScanMutex.Unlock()
+		return
+	}
+
+	// 生成文件名
+	a.ctScanImageCount++
+	filename := fmt.Sprintf("ct_scan_%04d.jpg", a.ctScanImageCount)
+	filepath := filepath.Join(a.ctScanPath, filename)
+
+	// 保存图像
+	err = ioutil.WriteFile(filepath, imageData, 0644)
+	if err != nil {
+		fmt.Printf("[CT扫描] 保存图像失败: %v\n", err)
+		a.ctScanMutex.Unlock()
+		return
+	}
+
+	fmt.Printf("[CT扫描] 已保存图像: %s (尺寸: %sx%s)\n", filename, width, height)
+
+	// 发送保存进度事件
+	runtime.EventsEmit(a.ctx, "ct_scan_progress", map[string]interface{}{
+		"count":    a.ctScanImageCount,
+		"filename": filename,
+		"filepath": filepath,
+		"width":    width,
+		"height":   height,
+	})
+
+	shouldSignal = true
+	a.ctScanMutex.Unlock()
+
+	// 在互斥锁外发送信号，避免阻塞
+	if shouldSignal && a.ctImageChan != nil {
+		select {
+		case a.ctImageChan <- struct{}{}:
+			// 信号已发送
+		default:
+			// 通道已满或未创建，忽略
+		}
+	}
 }

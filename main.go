@@ -43,5 +43,5 @@ func main() {
 }
 
 // $env:PATH = "C:\msys64\ucrt64\bin;" + [Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [Environment]::GetEnvironmentVariable("PATH", "User")
-// $env:PATH += ";E:\AppFile\code\vs\CTSystem\backend\CSDK\SDK"
+// $env:PATH += ";D:\appfile\code\vs\CTSystem\backend\CSDK\SDK"
 // $env:PATH = "C:\msys64\ucrt64\bin;" + $env:PATH

@@ -6,116 +6,172 @@
  */
 package components
 
-import "math"
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+)
 
 type MotorDevice struct {
 	ID  int
 	plc *XinjieClient
+
+	ctx     context.Context
+	lengths map[string]float64
 }
 
 // NewMotorDevice 创建电机设备实例
-func NewMotorDevice() *MotorDevice {
+func NewMotorDevice(ctx context.Context) *MotorDevice {
 	return &MotorDevice{
-		plc: NewXinjieClient(),
+		plc:     NewXinjieClient(),
+		ctx:     ctx,
+		lengths: map[string]float64{"X": 0, "Y": 0, "Z": 0, "R": 0},
 	}
 }
 
 func (m *MotorDevice) Connect(ip string) error {
-	return m.plc.OpenTCP(ip, 1)
+	err := m.plc.OpenTCP(ip, 1)
+	if err != nil {
+		return err
+	}
+	//开启子线程，循环获取电机状态
+	go m.GetMotorDetails()
+	runtime.EventsEmit(m.ctx, "stage_linked", map[string]bool{"stage_linked": true})
+
+	return nil
 }
 
 func (m *MotorDevice) Disconnect() {
 	m.plc.Close()
+	runtime.EventsEmit(m.ctx, "stage_linked", map[string]bool{"stage_linked": false})
 }
 
-func (m *MotorDevice) MotorJogMove(axis string, speed float32) {
-	// 先判断轴和方向
-	var cwAddr, ccwAddr uint16
+// GetLengths 获取当前各轴位置
+func (m *MotorDevice) GetLengths() map[string]float64 {
+	return m.lengths
+}
+
+// 连接成功后，子线程循环执行这个函数，获取电机状态
+func (m *MotorDevice) GetMotorDetails() {
+	for {
+		X, _ := m.plc.ReadHDRegister(4, Int32)
+		Y, _ := m.plc.ReadHDRegister(14, Int32)
+		Z, _ := m.plc.ReadHDRegister(24, Int32)
+		R, _ := m.plc.ReadHDRegister(34, Int32)
+
+		// lengths := map[string]float64{
+		// 	"X": float64(X.(int32)) / 1600.0 * 5.0,
+		// 	"Y": float64(Y.(int32)) / 1600.0 * 5.0,
+		// 	"Z": float64(Z.(int32)) / 1600.0 * 5.0,
+		// 	"R": float64(R.(int32)) / 1600.0 * 5.0,
+		// }
+		m.lengths["X"] = float64(X.(int32)) / 1600.0 * 5.0
+		m.lengths["Y"] = float64(Y.(int32)) / 1600.0 * 5.0
+		m.lengths["Z"] = float64(Z.(int32)) / 1600.0 * 5.0
+		m.lengths["R"] = float64(R.(int32)) / 1600.0 * 5.0
+
+		// fmt.Println(X, Y, Z, R, lengths)
+		runtime.EventsEmit(m.ctx, "motor_details", m.lengths)
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+// 电机设置速度
+func (m *MotorDevice) SetMotorSpeed(axis string, speed float32) error {
 	switch axis {
 	case "X":
-		cwAddr = ADDRESS.XCW
-		ccwAddr = ADDRESS.XCCW
+		speed_puls := int32(float64(speed) * 1600 / 5)
+		return m.plc.WriteHDRegister(2, speed_puls, Int32)
 	case "Y":
-		cwAddr = ADDRESS.YCW
-		ccwAddr = ADDRESS.YCCW
+		speed_puls := int32(float64(speed) * 1600 / 5)
+		return m.plc.WriteHDRegister(12, speed_puls, Int32)
 	case "Z":
-		cwAddr = ADDRESS.ZCW
-		ccwAddr = ADDRESS.ZCCW
+		speed_puls := int32(float64(speed) * 1600 / 5)
+		return m.plc.WriteHDRegister(22, speed_puls, Int32)
 	case "R":
-		cwAddr = ADDRESS.RCW
-		ccwAddr = ADDRESS.RCCW
+		speed_puls := int32(float64(speed) * 1600 / 5)
+		return m.plc.WriteHDRegister(32, speed_puls, Int32)
 	default:
-		return
+		return fmt.Errorf("axis %s not supported", axis)
 	}
-
-	// 统一写PLC
-	if speed > 0 {
-		m.plc.Write_M_Coils(cwAddr, []bool{true})
-		m.plc.Write_M_Coils(cwAddr, []bool{false})
-	} else {
-		m.plc.Write_M_Coils(ccwAddr, []bool{true})
-		m.plc.Write_M_Coils(ccwAddr, []bool{false})
-	}
-
-	//速度？
-	//PLC未给出速度所对应地址
-
 }
 
-func (m *MotorDevice) MotorStop(axis string) {
-	var stopAddr uint16
+func (m *MotorDevice) SetMotorLength(axis string, rel_length float32) error {
 	switch axis {
 	case "X":
-		stopAddr = ADDRESS.XSTOP
+		length_puls := int32(float64(rel_length) * 1600 / 5)
+		return m.plc.WriteHDRegister(0, length_puls, Int32)
 	case "Y":
-		stopAddr = ADDRESS.YSTOP
+		length_puls := int32(float64(rel_length) * 1600 / 5)
+		return m.plc.WriteHDRegister(10, length_puls, Int32)
 	case "Z":
-		stopAddr = ADDRESS.ZSTOP
+		length_puls := int32(float64(rel_length) * 1600 / 5)
+		return m.plc.WriteHDRegister(20, length_puls, Int32)
 	case "R":
-		stopAddr = ADDRESS.RSTOP
+		length_puls := int32(float64(rel_length) * 1600 / 5)
+		return m.plc.WriteHDRegister(30, length_puls, Int32)
 	default:
-		return
+		return fmt.Errorf("axis %s not supported", axis)
 	}
 
-	m.plc.Write_M_Coils(stopAddr, []bool{true})
-	m.plc.Write_M_Coils(stopAddr, []bool{false})
 }
 
-func (m *MotorDevice) MotorRelMove(axis string, speed float32, abs_length float32) {
-	var moveAddr uint16
+func (m *MotorDevice) MotorStop(axis string) error {
 	switch axis {
 	case "X":
-		moveAddr = ADDRESS.XABS
+		return m.plc.WriteMCoil(20, true)
 	case "Y":
-		moveAddr = ADDRESS.YABS
+		return m.plc.WriteMCoil(21, true)
 	case "Z":
-		moveAddr = ADDRESS.ZABS
+		return m.plc.WriteMCoil(22, true)
 	case "R":
-		moveAddr = ADDRESS.RABS
+		return m.plc.WriteMCoil(23, true)
 	default:
-		return
+		return nil
 	}
-
-	speed_puls := int16(math.Abs(float64(speed)) * 1600 / 5)
-	length_puls := int16(math.Abs(float64(abs_length)) * 1600 / 5)
-
-	if speed > 0 {
-		m.plc.WriteInt16(ADDRESS.ALLABS, []int16{speed_puls, 0, length_puls}) //神奇参数？？？正为0，负为-1？？？
-	} else {
-		m.plc.WriteInt16(ADDRESS.ALLABS, []int16{speed_puls, -1, length_puls})
-	}
-
-	m.plc.Write_M_Coils(moveAddr, []bool{true})
-	m.plc.Write_M_Coils(moveAddr, []bool{false})
-
 }
 
-func (m *MotorDevice) MotorAbsMove(axis string, speed float32, rel_length float32) {
-	// 暂未实现
+func (m *MotorDevice) MotorJogMove(axis string, speed float32) error {
+	switch axis {
+	case "X":
+		m.SetMotorSpeed(axis, speed)
+		return m.plc.WriteMCoil(10, true)
+	case "Y":
+		m.SetMotorSpeed(axis, speed)
+		return m.plc.WriteMCoil(11, true)
+	case "Z":
+		m.SetMotorSpeed(axis, speed)
+		return m.plc.WriteMCoil(12, true)
+	case "R":
+		m.SetMotorSpeed(axis, speed)
+		return m.plc.WriteMCoil(13, true)
+	default:
+		return nil
+	}
 }
 
-// MotorAbs 回零操作
-func (m *MotorDevice) MotorAbs(axis string) {
-	m.plc.Write_M_Coils(ADDRESS.ALLABS, []bool{true})
-	m.plc.Write_M_Coils(ADDRESS.ALLABS, []bool{false})
+func (m *MotorDevice) MotorRelMove(axis string, rel_length float32) error {
+	switch axis {
+	case "X":
+		m.SetMotorLength(axis, rel_length)
+		return m.plc.WriteMCoil(0, true)
+	case "Y":
+		m.SetMotorLength(axis, rel_length)
+		return m.plc.WriteMCoil(1, true)
+	case "Z":
+		m.SetMotorLength(axis, rel_length)
+		return m.plc.WriteMCoil(2, true)
+	case "R":
+		m.SetMotorLength(axis, rel_length)
+		return m.plc.WriteMCoil(3, true)
+	default:
+		return fmt.Errorf("axis %s not supported", axis)
+	}
+}
+
+func (m *MotorDevice) MotorAbsMove(axis string, abs_length float32) error {
+	rel_length := abs_length - float32(m.lengths[axis])
+	return m.MotorRelMove(axis, rel_length)
 }

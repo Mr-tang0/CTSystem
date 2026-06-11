@@ -9,16 +9,37 @@
         </div> -->
         
         <div class="monitor-content">
-            <!-- 探测器序列号 -->
-            <div class="monitor-item">
-                <span class="item-label">序列号</span>
-                <span class="item-value serial">{{ monitorData.serialNumber }}</span>
-            </div>
-            
             <!-- 当前北京时间 -->
             <div class="monitor-item">
                 <span class="item-label">时间</span>
                 <span class="item-value time">{{ monitorData.currentTime }}</span>
+            </div>
+
+            <!-- <div class="monitor-item">
+                <span class="item-label">序列号</span>
+                <span class="item-value serial">{{ monitorData.sn }}</span>
+            </div> -->
+            <!-- <div class="monitor-item">
+                <span class="item-label">模式</span>
+                <span class="item-value mode">{{ monitorData.mode }}</span>
+            </div> -->
+
+            <!-- 当前温度 -->
+            <!-- <div class="monitor-item">
+                <span class="item-label">温度</span>
+                <span class="item-value">{{ monitorData.tempreture.toFixed(2) }}°C</span>
+            </div> -->
+            
+            <!-- 当前湿度 -->
+            <!-- <div class="monitor-item">
+                <span class="item-label">湿度</span>
+                <span class="item-value">{{ monitorData.humidity.toFixed(2) }}%</span>
+            </div> -->
+            
+            <!-- 当前曝光时间 -->
+            <div class="monitor-item">
+                <span class="item-label">曝光时间</span>
+                <span class="item-value">{{ monitorData.exposureTime.toFixed(2) }}ms</span>
             </div>
             
             <!-- 当前拍摄角度 -->
@@ -29,35 +50,85 @@
             
             <!-- 图像尺寸 -->
             <div class="monitor-item">
-                <span class="item-label">尺寸</span>
+                <span class="item-label">图像尺寸</span>
                 <span class="item-value size">{{ monitorData.imageWidth }} × {{ monitorData.imageHeight }}</span>
             </div>
             
             <!-- 当前采集状态 -->
             <div class="monitor-item status-item">
                 <span class="item-label">状态</span>
-                <span class="item-value" :class="getStatusClass(monitorData.status)">
-                    {{ getStatusText(monitorData.status) }}
-                </span>
+                <span class="item-value">{{ monitorData.status }}</span>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue';
+import { ref, reactive, onMounted, onUnmounted, watch } from 'vue';
 
-const monitorData = reactive({
-    serialNumber: 'CT-2024-001',
-    currentTime: '',
-    angle: 0.00,
-    imageWidth: 3072,
-    imageHeight: 3072,
-    status: 'idle' // 'idle', 'exposing', 'success'
+const props = defineProps({
+    imageWidth: {
+        type: Number,
+        default: null
+    },
+    imageHeight: {
+        type: Number,
+        default: null
+    },
+    angle: {
+        type: Number,
+        default: 0.00
+    },
+    sn: {
+        type: String,
+        default: ''
+    },
+    mode: {
+        type: String,
+        default: 'idle'
+    },
+    tempreture: {
+        type: Number,
+        default: 0.00
+    },
+    humidity: {
+        type: Number,
+        default: 0.00
+    },
+    exposureTime: {
+        type: Number,
+        default: 0.00
+    },
+    status: {
+        type: String,
+        default: '未运行'
+    },
 });
 
-let timer = null;
+const monitorData = reactive({
+    sn: props.sn,//设备序列号
+    mode: props.mode,//采集模式
+    tempreture: props.tempreture,//温度
+    humidity: props.humidity,//湿度
+    exposureTime: props.exposureTime,//曝光时间
+    currentTime: '',
+    angle: props.angle,
+    imageWidth: props.imageWidth,
+    imageHeight: props.imageHeight,
+    status: props.status,
+});
 
+// 监听props变化
+// watch(() => props.imageWidth, (newVal) => {monitorData.imageWidth = newVal;});
+// watch(() => props.imageHeight, (newVal) => {monitorData.imageHeight = newVal;});
+// watch(() => props.angle, (newVal) => {monitorData.angle = newVal;});
+// watch(() => props.sn, (newVal) => { monitorData.sn = newVal; });
+// watch(() => props.mode, (newVal) => { monitorData.mode = newVal; });
+// watch(() => props.tempreture, (newVal) => { monitorData.tempreture = newVal; });
+// watch(() => props.humidity, (newVal) => { monitorData.humidity = newVal; });
+// watch(() => props.exposureTime, (newVal) => { monitorData.exposureTime = newVal; });
+
+let timer = null;
 const updateTime = () => {
     const now = new Date();
     monitorData.currentTime = now.toLocaleString('zh-CN', {
@@ -71,41 +142,10 @@ const updateTime = () => {
     });
 };
 
-const getStatusClass = (status) => {
-    switch (status) {
-        case 'exposing':
-            return 'status-exposing';
-        case 'success':
-            return 'status-success';
-        case 'idle':
-        default:
-            return 'status-idle';
-    }
-};
-
-const getStatusText = (status) => {
-    switch (status) {
-        case 'exposing':
-            return '正在曝光';
-        case 'success':
-            return '采集成功';
-        case 'idle':
-        default:
-            return '待命中';
-    }
-};
-
-// 模拟角度变化
-const simulateAngleChange = () => {
-    monitorData.angle = (monitorData.angle + 0.5) % 360;
-};
 
 onMounted(() => {
     updateTime();
-    timer = setInterval(() => {
-        updateTime();
-        simulateAngleChange();
-    }, 1000);
+    timer = setInterval(() => {updateTime();}, 1000);
 });
 
 onUnmounted(() => {

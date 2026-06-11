@@ -149,6 +149,10 @@
 
 <script setup>
 import { reactive, ref } from 'vue';
+import { 
+    StageOpenDevice,StageCloseDevice,
+    DetectorConnect, DetectorDisconnect,
+ } from '../../wailsjs/go/main/App'
 
 defineProps({
     visible: {
@@ -159,38 +163,69 @@ defineProps({
 
 const emit = defineEmits(['close']);
 
+const detectorList = ref([
+    { id: 'ct-1', name: '2121Z', serial: 'AGAB1U10R1' },
+]);
+
 const devices = reactive({
-    stage: { ip: '192.168.11.6', connected: false },
+    stage: { ip: '192.168.6.6', connected: false },
     power: { ip: '192.168.11.4', connected: false },
     source: { ip: '192.168.11.5', connected: false },
-    detector: { selected: '', connected: false }
+    detector: { selected: 'ct-1', connected: false }
 });
 
-const detectorList = ref([
-    { id: 'det-1', name: 'CT-Detector-A', serial: 'SN-2024-001' },
-    { id: 'det-2', name: 'CT-Detector-B', serial: 'SN-2024-002' },
-    { id: 'det-3', name: 'CT-Detector-C', serial: 'SN-2024-003' }
-]);
+
 
 const handleClose = () => {
     emit('close');
 };
 
-const toggleDevice = (deviceType) => {
+const toggleDevice = async (deviceType) => {
     const device = devices[deviceType];
     
-    if (deviceType === 'detector' && !device.selected) {
-        console.log('请先选择探测器');
+    if (deviceType === 'detector') {
+        if (!device.selected) {
+            console.log('请选择探测器');
+            return;
+        }
+
+        if (!device.connected) {
+            try {
+                await DetectorConnect();
+                device.connected = true;
+            } catch (error) {
+                console.error('连接探测器失败:', error);
+                return;
+            }
+        }else{
+            try {
+                await DetectorDisconnect();
+                device.connected = false;
+            } catch (error) {
+                console.error('断开探测器失败:', error);
+                return;
+            }
+        }
+
         return;
+    }else if (deviceType === 'stage') {
+        if (!device.connected) {
+            try {
+                await StageOpenDevice(device.ip+':502');
+                device.connected = true;
+            } catch (error) {
+                console.error('连接 Stage 失败:', error);
+                return;
+            }
+        }else{
+            try {
+                await StageCloseDevice();
+                device.connected = false;
+            } catch (error) {
+}
+        }
     }
-    
-    if (deviceType !== 'detector' && !device.ip) {
-        console.log('请输入IP地址');
-        return;
-    }
-    
-    device.connected = !device.connected;
-    console.log(`${deviceType} ${device.connected ? '连接成功' : '已断开'}`);
+
 };
 
 const refreshDetectors = () => {
