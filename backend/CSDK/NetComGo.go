@@ -77,10 +77,7 @@ import "C"
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
-	"image"
-	"image/jpeg"
 	"sync"
 	"unsafe"
 
@@ -159,45 +156,20 @@ func goOnImageCallBack(nEvent C.char) C.int {
 	// 从底层的共享内存或硬通道中抓取图像
 	C.COM_GetImage((*C.char)(pPicBuff))
 
-	// 将 C 内存指针映射为 Go 的无拷贝 []byte 切片
-	raw16Data := (*[1 << 30]byte)(pPicBuff)[:bufSize:bufSize]
+	// 将 C 内存数据复制到 Go 切片中（避免 C 内存释放后数据失效）
+	raw16Data := make([]byte, bufSize)
+	copy(raw16Data, (*[1 << 30]byte)(unsafe.Pointer(pPicBuff))[:bufSize:bufSize])
 
-	// 创建标准的 8 位灰度图像容器
-	grayImg := image.NewGray(image.Rect(0, 0, col, row))
-
-	// 16位 RAW 转 8位灰度：使用固定参考值转换
-	const maxRef uint32 = 255 // 16位最大值作为固定参考
-	for i := 0; i < col*row; i++ {
-		// Little-endian: 低字节在前，高字节在后
-		val := uint32(raw16Data[i*2]) | (uint32(raw16Data[i*2+1]) << 8)
-		// 直接线性映射到 0-255
-		normalized := val * 255 / maxRef
-		grayImg.Pix[i] = uint8(normalized)
+	// 发送原始16位数据（包含宽高信息）
+	rawData := map[string]interface{}{
+		"image":  raw16Data,
+		"width":  col,
+		"height": row,
 	}
-
-	// 从对象池获取 Buffer，对灰度图执行高效 JPEG 编码
-	buf := imgBufferPool.Get().(*bytes.Buffer)
-	buf.Reset()
-	defer imgBufferPool.Put(buf)
-
-	// 质量设为 60：既保证了图像的高还原度，又大幅压减了 Base64 的传输体积，提升帧率
-	if err := jpeg.Encode(buf, grayImg, &jpeg.Options{Quality: 60}); err != nil {
-		fmt.Println("[Go 图像处理] JPEG 编码失败:", err)
-		return 0
+	fmt.Println("发送原始数据:")
+	if globalNetCom.ctx != nil {
+		runtime.EventsEmit(globalNetCom.ctx, "ct_raw", rawData)
 	}
-
-	// 转换为 Base64（添加 JPEG 前缀，以便浏览器正确识别）
-	encodedStr := "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(buf.Bytes())
-
-	data := map[string]string{
-		"image":  encodedStr,
-		"width":  fmt.Sprintf("%d", col),
-		"height": fmt.Sprintf("%d", row),
-	}
-
-	// 将完整的 Base64 图像异步广播至前端监听器
-	go runtime.EventsEmit(globalNetCom.ctx, "ct_image", data)
-
 	return 0
 }
 
@@ -214,17 +186,20 @@ func goOnHeartBeatCallBack(nEvent C.char) C.int {
 	// 获取当前状态
 	cFpCurStat := C.COM_GetFPCurStatus()
 	statusText := ""
+	// fmt.Printf("[心跳数据] 状态: %d\n", cFpCurStat)
 	switch cFpCurStat {
-	case 0:
+	case 3:
 		statusText = "AED1"
 	case 1:
 		statusText = "IDLE"
 	case 2:
 		statusText = "HST"
-	case 3:
-		statusText = "AED2"
 	case 4:
+		statusText = "AED2"
+	case 5:
 		statusText = "RECOVER"
+	case 9:
+		statusText = "DST"
 	default:
 		statusText = "ERR"
 	}
@@ -374,17 +349,17 @@ func (n *NetCom) COM_GetExposeTime() int {
 // 设置Binning
 func (n *NetCom) COM_SetBinning(binning string) bool {
 	switch binning {
-	case "1×1":
+	case "1×1", "1x1":
 		return C.COM_SetBinningMode(C.BINNING_1x1) == 1
-	case "2×2":
+	case "2×2", "2x2":
 		return C.COM_SetBinningMode(C.BINNING_2x2) == 1
-	case "3×3":
+	case "3×3", "3x3":
 		return C.COM_SetBinningMode(C.BINNING_3x3) == 1
-	case "4×4":
+	case "4×4", "4x4":
 		return C.COM_SetBinningMode(C.BINNING_4x4) == 1
-	case "6×6":
+	case "6×6", "6x6":
 		return C.COM_SetBinningMode(C.BINNING_6x6) == 1
-	case "8×8":
+	case "8×8", "8x8":
 		return C.COM_SetBinningMode(C.BINNING_8x8) == 1
 	default:
 		fmt.Printf("设置binning失败: %s\n", binning)
@@ -400,17 +375,17 @@ func (n *NetCom) COM_GetBinning() string {
 
 	switch pbinMode {
 	case C.BINNING_1x1:
-		return "1×1"
+		return "1x1"
 	case C.BINNING_2x2:
-		return "2×2"
+		return "2x2"
 	case C.BINNING_3x3:
-		return "3×3"
+		return "3x3"
 	case C.BINNING_4x4:
-		return "4×4"
+		return "4x4"
 	case C.BINNING_6x6:
-		return "6×6"
+		return "6x6"
 	case C.BINNING_8x8:
-		return "8×8"
+		return "8x8"
 	default:
 		return "error"
 	}

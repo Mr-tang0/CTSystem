@@ -7,6 +7,8 @@
 package main
 
 import (
+	"CTSystem/backend"
+	DEVICE "CTSystem/backend/components"
 	"embed"
 
 	"github.com/wailsapp/wails/v2"
@@ -19,7 +21,11 @@ var assets embed.FS
 
 func main() {
 	// Create an instance of the app structure
-	app := NewApp()
+	project := backend.NewProject()
+	CT := DEVICE.NewCTDevice()
+	Stage := DEVICE.NewMotorDevice()
+	HVPS := DEVICE.NewHVPSDevice()
+	app := NewApp(project, Stage, CT, HVPS)
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -34,6 +40,10 @@ func main() {
 		OnStartup:        app.startup,
 		Bind: []interface{}{
 			app,
+			project,
+			Stage,
+			CT,
+			HVPS,
 		},
 	})
 

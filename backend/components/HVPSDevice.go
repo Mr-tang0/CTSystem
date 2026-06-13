@@ -7,6 +7,7 @@
 package components
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -44,6 +45,8 @@ type HVPSDevice struct {
 	// 错误状态
 	errCheck  int
 	hvpsNoErr bool
+
+	ctx context.Context
 }
 
 // NewHVPSDevice 创建高压电源设备实例
@@ -53,8 +56,15 @@ func NewHVPSDevice() *HVPSDevice {
 	}
 }
 
+func (h *HVPSDevice) SetContent(ctx context.Context) {
+	h.ctx = ctx
+	if conn := ctx.Value("conn"); conn != nil {
+		h.conn = conn.(net.Conn)
+	}
+}
+
 // ConnectHVPS 连接高压电源设备
-func (h *HVPSDevice) ConnectHVPS(HVPS_ip string, HVPS_port int) error {
+func (h *HVPSDevice) HighVoltageConnect(HVPS_ip string, HVPS_port int) error {
 	addr := fmt.Sprintf("%s:%d", HVPS_ip, HVPS_port)
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
@@ -65,7 +75,7 @@ func (h *HVPSDevice) ConnectHVPS(HVPS_ip string, HVPS_port int) error {
 }
 
 // DisconnectHVPS 断开连接
-func (h *HVPSDevice) DisconnectHVPS() error {
+func (h *HVPSDevice) HighVoltageDisconnect() error {
 	if h.conn != nil {
 		err := h.conn.Close()
 		h.conn = nil

@@ -18,9 +18,9 @@ import (
 
 // 通讯协议相关定义
 const (
-	STX            = 0x02 // 帧头
-	ETX            = 0x03 // 帧尾
-	SEPARATOR      = 0x2C // 间隔符（逗号）
+	STX              = 0x02 // 帧头
+	ETX              = 0x03 // 帧尾
+	SEPARATOR        = 0x2C // 间隔符（逗号）
 	DEFAULT_BAUDRATE = 9600
 	RESPONSE_DELAY   = 200 // 响应延迟（ms）
 	COMM_INTERVAL    = 100 // 通讯间隔（ms）
@@ -30,47 +30,47 @@ const (
 type CmdCode int
 
 const (
-	SET_KV              CmdCode = 10 // 设置kV电压
-	SET_MA              CmdCode = 11 // 设置mA电流
-	READ_KV_SET         CmdCode = 14 // 读取kV设定值
-	READ_MA_SET         CmdCode = 15 // 读取mA设定值
-	READ_MODULE_STATUS  CmdCode = 22 // 读取故障码
-	READ_CODE_VERSION   CmdCode = 23 // 读取软件版本号
+	SET_KV               CmdCode = 10 // 设置kV电压
+	SET_MA               CmdCode = 11 // 设置mA电流
+	READ_KV_SET          CmdCode = 14 // 读取kV设定值
+	READ_MA_SET          CmdCode = 15 // 读取mA设定值
+	READ_MODULE_STATUS   CmdCode = 22 // 读取故障码
+	READ_CODE_VERSION    CmdCode = 23 // 读取软件版本号
 	READ_HARDWRE_VERSION CmdCode = 24 // 读取硬件版本号
-	READ_SERIAL_NO      CmdCode = 25 // 读取出厂编码
-	SERVICE_WATCHDOG    CmdCode = 27 // 喂通讯看门狗
-	WATCHDOG_ENA        CmdCode = 28 // 使能看门狗
-	RESET_FAULT_FLAG    CmdCode = 32 // 清除故障标志位
-	READ_NOW_KV         CmdCode = 60 // 读取当前kV值
-	READ_NOW_MA         CmdCode = 61 // 读取当前mA值
-	READ_OIL_TEMP       CmdCode = 63 // 读取油温值
+	READ_SERIAL_NO       CmdCode = 25 // 读取出厂编码
+	SERVICE_WATCHDOG     CmdCode = 27 // 喂通讯看门狗
+	WATCHDOG_ENA         CmdCode = 28 // 使能看门狗
+	RESET_FAULT_FLAG     CmdCode = 32 // 清除故障标志位
+	READ_NOW_KV          CmdCode = 60 // 读取当前kV值
+	READ_NOW_MA          CmdCode = 61 // 读取当前mA值
+	READ_OIL_TEMP        CmdCode = 63 // 读取油温值
 	READ_TOTAL_ARC_COUNT CmdCode = 72 // 读取设备总打火次数
-	READ_LAST_ARC_COUNT CmdCode = 73 // 读取最近打火次数
-	READ_XRAY_STATUS    CmdCode = 96 // 读取射线源状态
-	XRAY_ONOFF          CmdCode = 99 // 打开或关闭射线源
+	READ_LAST_ARC_COUNT  CmdCode = 73 // 读取最近打火次数
+	READ_XRAY_STATUS     CmdCode = 96 // 读取射线源状态
+	XRAY_ONOFF           CmdCode = 99 // 打开或关闭射线源
 )
 
 // 射线源状态定义
 type XRayStatus int
 
 const (
-	XRAY_OFF XRayStatus = 0 // 关闭
-	XRAY_ON  XRayStatus = 1 // 打开
+	XRAY_OFF  XRayStatus = 0 // 关闭
+	XRAY_ON   XRayStatus = 1 // 打开
 	XRAY_WARM XRayStatus = 2 // 预热
 )
 
 // 故障码位定义
 const (
-	FAULT_LOCK         = 0 // B0：闭锁保护
-	FAULT_OCP_LCC      = 1 // B1：OCP_LCC保护
-	FAULT_KV_OVER      = 2 // B2：kV过压保护
-	FAULT_KV_UNDER     = 3 // B3：kV欠压保护
-	FAULT_ARC_LOCK     = 4 // B4：打火锁死保护
-	FAULT_INPUT_VOLT   = 5 // B5：输入过欠压保护
-	FAULT_TEMP         = 6 // B6：温度保护
-	FAULT_REMOTE       = 7 // B7：Remote保护
-	FAULT_MA_OVER      = 8 // B8：mA过流保护
-	FAULT_MA_UNDER     = 9 // B9：mA欠流保护
+	FAULT_LOCK         = 0  // B0：闭锁保护
+	FAULT_OCP_LCC      = 1  // B1：OCP_LCC保护
+	FAULT_KV_OVER      = 2  // B2：kV过压保护
+	FAULT_KV_UNDER     = 3  // B3：kV欠压保护
+	FAULT_ARC_LOCK     = 4  // B4：打火锁死保护
+	FAULT_INPUT_VOLT   = 5  // B5：输入过欠压保护
+	FAULT_TEMP         = 6  // B6：温度保护
+	FAULT_REMOTE       = 7  // B7：Remote保护
+	FAULT_MA_OVER      = 8  // B8：mA过流保护
+	FAULT_MA_UNDER     = 9  // B9：mA欠流保护
 	FAULT_POWER_OVER   = 10 // B10：过功率保护
 	FAULT_WATCHDOG     = 11 // B11：看门狗溢出保护
 	FAULT_XRAY_OFF     = 12 // B12：Xray关闭
